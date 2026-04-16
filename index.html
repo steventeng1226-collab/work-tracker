@@ -375,29 +375,39 @@ const api = {
 // ④ SMALL COMPONENTS
 // ════════════════════════════════════════════════════
 const PBadge = ({ level }) => (
-  <div className={`p-badge ${pInfo(level).badge}`}>{level}</div>
+  <div style={{
+    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+    width:34, minWidth:34, height:36, borderRadius:6, flexShrink:0,
+    background: level==='P1'?'#FCEBEB': level==='P2'?'#FAEEDA': level==='P3'?'#f0f0f0':'#EAF3DE',
+  }}>
+    <span style={{
+      fontSize:11, fontWeight:700, lineHeight:1.2,
+      color: level==='P1'?'#A32D2D': level==='P2'?'#854F0B': level==='P3'?'#555':'#27500A',
+    }}>{level}</span>
+    <span style={{
+      fontSize:9, lineHeight:1.2,
+      color: level==='P1'?'#A32D2D': level==='P2'?'#854F0B': level==='P3'?'#555':'#27500A',
+    }}>{pInfo(level).label}</span>
+  </div>
 );
 
-const PRIORITY_COLORS = {
-  P1: '#E24B4A',
-  P2: '#EF9F27',
-  P3: '#1a1a1a',
-  P4: '#3B6D11',
-};
+const PCOL = { P1:'#E24B4A', P2:'#EF9F27', P3:'#1a1a1a', P4:'#3B6D11' };
 
 const TaskRow = ({ task, onClick }) => {
   const overdue = isOverdue(task.dueDate);
-  // P2 逾期 → 變紅色
-  const titleColor = (task.priority === 'P2' && overdue)
-    ? '#E24B4A'
-    : PRIORITY_COLORS[task.priority] || '#1a1a1a';
+  const p = task.priority || 'P3';
+  // P2 逾期 → 紅色；其他依優先等級
+  const titleColor = (p === 'P2' && overdue) ? '#E24B4A' : (PCOL[p] || '#1a1a1a');
   return (
     <div className="t-row" onClick={() => onClick(task)}>
-      <PBadge level={task.priority} />
-      <span className="t-title" style={{ color: titleColor }}>{task.title}</span>
+      <PBadge level={p} />
+      <span style={{
+        flex:1, fontSize:14, whiteSpace:'nowrap', overflow:'hidden',
+        textOverflow:'ellipsis', color: titleColor, fontWeight: p==='P1'?600:400,
+      }}>{task.title}</span>
       <div className="t-date-area">
         {overdue && <span className="overdue-pill">逾期</span>}
-        <span className="t-date" style={{ color: overdue ? '#E24B4A' : '#bbb' }}>
+        <span style={{ fontSize:11, color: overdue ? '#E24B4A' : '#bbb' }}>
           {fmtShort(task.dueDate)}
         </span>
       </div>
@@ -426,7 +436,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
           <span className="date-main">{todayDisplay()}</span>
           <span className="date-wd">{todayWD()}</span>
         </div>
-        <span className="date-right">⟳ 今日 {meetings.length} 場</span>
+        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.1</span></span>
       </div>
       <div className="stat-row">
         <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
@@ -448,7 +458,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
         <div key={i} className={`m-row ${m.done ? 'done' : ''}`}>
           <div className="m-dot" style={{background: m.done ? '#ddd' : 'var(--green-mid)'}} />
           <span className="m-time">{m.startTime}–{m.endTime}</span>
-          <span className="m-title">{m.title}</span>
+          <span className="m-title" style={m.done?{textDecoration:'line-through',color:'#ccc',fontWeight:400}:{fontWeight:600,color:'#1a1a1a'}}>{m.title}</span>
         </div>
       ))}
       {meetings.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>今日無會議</div>}
