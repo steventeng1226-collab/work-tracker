@@ -129,11 +129,15 @@ body {
 }
 .m-row:active { background: #f8f8f8; }
 .m-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: background 0.2s; }
-.m-time { font-size: 12px; color: var(--text-muted); width: 74px; flex-shrink: 0; white-space: nowrap; }
-.m-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 未完成的會議：粗體黑色 */
+.m-time { font-size: 12px; color: #555; width: 74px; flex-shrink: 0; white-space: nowrap; font-weight: 500; }
+.m-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .m-arrow { font-size: 16px; color: var(--text-hint); flex-shrink: 0; }
-.m-row.done .m-time, .m-row.done .m-title { text-decoration: line-through; color: var(--text-hint); }
+/* 已完成的會議：刪除線＋淺灰色 */
+.m-row.done .m-time { text-decoration: line-through; color: #ccc; font-weight: 400; }
+.m-row.done .m-title { text-decoration: line-through; color: #ccc; font-weight: 400; }
 .m-row.done .m-dot { background: #ddd !important; }
+.m-row.done { background: #fafafa; }
 .m-expand { background: #f9f9f9; padding: 10px 16px 10px 40px; border-bottom: 0.5px solid var(--divider); font-size: 13px; color: #666; line-height: 1.7; }
 
 /* ── Task row ── */
@@ -322,21 +326,41 @@ const pInfo = p => PMAP[p] || PMAP.P3;
 // ════════════════════════════════════════════════════
 // ③ API
 // ════════════════════════════════════════════════════
+// ── Apps Script CORS 說明 ──────────────────────────────────
+// GAS 不支援 CORS preflight（OPTIONS），
+// 所以 POST 必須用 text/plain（不觸發 preflight），
+// GAS 端用 e.postData.contents 解析 JSON 字串。
+// GET 請求無 preflight 問題，直接使用。
+// ────────────────────────────────────────────────────────
+
+const fetchWithTimeout = (url, options={}, ms=10000) => {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(t));
+};
+
 const api = {
   async get(action, params = {}) {
+    if (!GAS_URL) throw new Error('尚未設定 Apps Script 網址');
     const qs = new URLSearchParams({ action, ...params }).toString();
-    const res = await fetch(`${GAS_URL}?${qs}`);
+    const res = await fetchWithTimeout(`${GAS_URL}?${qs}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const data = await res.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
   },
   async post(body) {
-    const res = await fetch(GAS_URL, {
+    if (!GAS_URL) throw new Error('尚未設定 Apps Script 網址');
+    // 使用 text/plain 避免 CORS preflight，GAS 端解析 JSON 字串
+    const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const data = await res.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
   },
   getMeetings: d => api.get('getMeetings', { date: d }),
   getTasks:    () => api.get('getTasks'),
@@ -354,15 +378,26 @@ const PBadge = ({ level }) => (
   <div className={`p-badge ${pInfo(level).badge}`}>{level}</div>
 );
 
+const PRIORITY_COLORS = {
+  P1: '#E24B4A',
+  P2: '#EF9F27',
+  P3: '#1a1a1a',
+  P4: '#3B6D11',
+};
+
 const TaskRow = ({ task, onClick }) => {
   const overdue = isOverdue(task.dueDate);
+  // P2 逾期 → 變紅色
+  const titleColor = (task.priority === 'P2' && overdue)
+    ? '#E24B4A'
+    : PRIORITY_COLORS[task.priority] || '#1a1a1a';
   return (
     <div className="t-row" onClick={() => onClick(task)}>
       <PBadge level={task.priority} />
-      <span className={`t-title ${pInfo(task.priority).text}`}>{task.title}</span>
+      <span className="t-title" style={{ color: titleColor }}>{task.title}</span>
       <div className="t-date-area">
         {overdue && <span className="overdue-pill">逾期</span>}
-        <span className="t-date" style={{ color: overdue ? 'var(--red)' : '#bbb' }}>
+        <span className="t-date" style={{ color: overdue ? '#E24B4A' : '#bbb' }}>
           {fmtShort(task.dueDate)}
         </span>
       </div>
@@ -605,9 +640,17 @@ const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed }) => {
   const handleClose = async () => {
     if (!window.confirm('確定要結案此任務嗎？')) return;
     setClosing(true);
-    const closeDate = current.completionDate || todayStr();
-    await api.closeTask(current.id, { ...current, completionDate: closeDate });
-    onClosed(current.id, { ...current, completionDate: closeDate });
+    try {
+      const closeDate = current.completionDate || todayStr();
+      await api.closeTask(current.id, { ...current, completionDate: closeDate });
+      onClosed(current.id, { ...current, completionDate: closeDate });
+    } catch(e) {
+      setClosing(false);
+      const msg = e.name === 'AbortError'
+        ? '⚠ 連線逾時（15秒），請確認 Apps Script 已部署且網址正確'
+        : '⚠ 結案失敗：' + e.message;
+      alert(msg);
+    }
   };
 
   if (editMode) return (
