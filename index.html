@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<title>工作追蹤</title>
+<style>
+:root {
+  --red: #E24B4A; --orange: #EF9F27; --green: #3B6D11; --blue: #185FA5;
+  --red-bg: #FCEBEB; --red-dark: #A32D2D;
+  --orange-bg: #FAEEDA; --orange-dark: #854F0B;
+  --green-bg: #EAF3DE; --green-mid: #1D9E75;
+  --blue-bg: #EBF3FA;
+  --gray: #888; --gray-light: #f0f0f0;
+  --text: #1a1a1a; --text-muted: #999; --text-hint: #ccc;
+  --border: #eeeeee; --divider: #f2f2f2;
+  --bg: #f5f5f5; --card: #ffffff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', 'Heiti TC', sans-serif;
+  background: var(--bg); color: var(--text);
+  max-width: 430px; margin: 0 auto; min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+#root { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Scroll ── */
+.scroll-area {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 76px;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ── Tab Bar ── */
+.tab-bar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px;
+  background: var(--card); border-top: 0.5px solid var(--border);
+  display: flex; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 200;
+}
+.tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 2px 0; }
+.tab-item .t-label { font-size: 10px; color: #bbb; transition: color 0.15s; }
+.tab-item.active .t-label { color: var(--red); font-weight: 500; }
+.tab-item .t-bar { width: 18px; height: 2px; border-radius: 1px; background: transparent; transition: background 0.15s; }
+.tab-item.active .t-bar { background: var(--red); }
+
+/* ── Header row ── */
+.date-bar {
+  background: var(--card); padding: 15px 16px 11px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 0.5px solid var(--border);
+}
+.date-main { font-size: 22px; font-weight: 600; color: var(--text); }
+.date-wd { font-size: 13px; color: var(--text-muted); margin-left: 8px; }
+.date-right { font-size: 11px; color: var(--text-muted); }
+
+/* ── Stat cards ── */
+.stat-row { display: flex; gap: 6px; padding: 10px 12px 8px; background: var(--card); border-bottom: 0.5px solid var(--border); }
+.stat-card { flex: 1; background: #fafafa; border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; }
+.stat-num { font-size: 20px; font-weight: 600; }
+.stat-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Section header ── */
+.sec-hdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 5px; }
+.sec-hdr-left { display: flex; align-items: center; gap: 5px; }
+.sec-dot { width: 7px; height: 7px; border-radius: 2px; }
+.sec-title { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; }
+.sec-count { font-size: 11px; color: var(--text-muted); }
+
+/* ── Meeting row ── */
+.m-row {
+  background: var(--card); padding: 10px 16px;
+  border-bottom: 0.5px solid var(--divider);
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  transition: background 0.1s;
+}
+.m-row:active { background: #f8f8f8; }
+.m-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: background 0.2s; }
+.m-time { font-size: 12px; color: var(--text-muted); width: 74px; flex-shrink: 0; white-space: nowrap; }
+.m-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-arrow { font-size: 16px; color: var(--text-hint); flex-shrink: 0; }
+.m-row.done .m-time, .m-row.done .m-title { text-decoration: line-through; color: var(--text-hint); }
+.m-row.done .m-dot { background: #ddd !important; }
+.m-expand { background: #f9f9f9; padding: 10px 16px 10px 40px; border-bottom: 0.5px solid var(--divider); font-size: 13px; color: #666; line-height: 1.7; }
+
+/* ── Task row ── */
+.t-row {
+  background: var(--card); padding: 10px 16px;
+  border-bottom: 0.5px solid var(--divider);
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  transition: background 0.1s;
+}
+.t-row:active { background: #f8f8f8; }
+.p-badge { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.p1-b { background: var(--red-bg); color: var(--red-dark); }
+.p2-b { background: var(--orange-bg); color: var(--orange-dark); }
+.p3-b { background: var(--gray-light); color: #555; }
+.p4-b { background: var(--green-bg); color: #27500A; }
+.t-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p1-t { color: var(--red); }
+.p2-t { color: var(--orange); }
+.p3-t { color: var(--text); }
+.p4-t { color: var(--green); }
+.t-date-area { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.overdue-pill { background: var(--red-bg); color: var(--red-dark); font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
+.t-date { font-size: 11px; }
+
+/* ── Page headers (detail / form) ── */
+.page-hdr {
+  background: var(--card); padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 0.5px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.page-hdr-title { flex: 1; font-size: 17px; font-weight: 500; }
+.back-btn { font-size: 26px; color: var(--text-muted); cursor: pointer; line-height: 1; padding-right: 4px; }
+.hdr-action { font-size: 13px; color: var(--blue); cursor: pointer; font-weight: 500; }
+
+/* ── Form ── */
+.form-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
+.form-section { background: var(--card); margin-bottom: 8px; }
+.form-row { padding: 12px 16px; border-bottom: 0.5px solid #f7f7f7; display: flex; align-items: center; gap: 12px; }
+.form-row:last-child { border-bottom: none; }
+.f-label { font-size: 13px; color: var(--text-muted); width: 82px; flex-shrink: 0; }
+.form-row input, .form-row select {
+  flex: 1; border: none; outline: none; font-size: 14px;
+  background: transparent; color: var(--text); font-family: inherit;
+  -webkit-appearance: none;
+}
+.form-row input::placeholder { color: var(--text-hint); }
+.form-textarea-wrap { padding: 12px 16px; }
+.form-textarea-wrap label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 8px; }
+.form-textarea-wrap textarea {
+  width: 100%; border: none; outline: none; font-size: 14px;
+  background: transparent; color: var(--text); font-family: inherit;
+  resize: none; min-height: 100px; line-height: 1.7;
+}
+.form-textarea-wrap textarea::placeholder { color: var(--text-hint); }
+.created-row { padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.created-val { font-size: 14px; color: var(--text-muted); }
+
+/* ── Buttons ── */
+.btn-row { display: flex; gap: 10px; padding: 16px; }
+.btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+.btn:active { opacity: 0.75; }
+.btn-primary { background: var(--red); color: #fff; }
+.btn-close { background: var(--orange-bg); color: var(--orange-dark); }
+.btn-secondary { background: var(--gray-light); color: #555; }
+.btn-edit { background: var(--blue-bg); color: var(--blue); }
+
+/* ── Detail ── */
+.detail-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
+.detail-block { background: var(--card); margin-bottom: 8px; }
+.detail-meta { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 18px; }
+.detail-field { }
+.df-label { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+.df-value { font-size: 14px; color: var(--text); }
+.detail-text { padding: 12px 16px; }
+.dt-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.dt-value { font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+
+/* ── History ── */
+.h-search {
+  margin: 10px 14px;
+  background: var(--card); border: 0.5px solid var(--border);
+  border-radius: 9px; padding: 9px 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.h-search input { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; font-family: inherit; color: var(--text); }
+.h-search input::placeholder { color: var(--text-hint); }
+.h-month { padding: 8px 16px 4px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; background: var(--bg); }
+.h-row { background: var(--card); padding: 10px 16px; border-bottom: 0.5px solid var(--divider); cursor: pointer; }
+.h-row:active { background: #f8f8f8; }
+.h-top { display: flex; align-items: center; gap: 8px; }
+.h-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.h-meta { font-size: 12px; color: #bbb; padding-left: 28px; margin-top: 3px; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 80px; right: 20px;
+  width: 50px; height: 50px;
+  background: var(--red); border-radius: 25px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 3px 10px rgba(226,75,74,0.45); z-index: 150;
+  transition: transform 0.15s;
+}
+.fab:active { transform: scale(0.92); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(30,30,30,0.85); color: #fff;
+  padding: 9px 18px; border-radius: 20px; font-size: 13px;
+  z-index: 999; white-space: nowrap; pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform: translateX(-50%) translateY(-6px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+/* ── Loading / Empty ── */
+.spinner { display: flex; align-items: center; justify-content: center; padding: 48px 16px; color: var(--text-muted); font-size: 14px; }
+.empty { text-align: center; padding: 48px 16px; color: var(--text-hint); font-size: 14px; }
+
+/* ── Setup screen ── */
+.setup-wrap { padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; }
+.setup-title { font-size: 20px; font-weight: 600; }
+.setup-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+.setup-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
+.setup-input:focus { border-color: var(--red); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ════════════════════════════════════════════════════
+// ① CONFIG  ← 部署 Apps Script 後填入 URL
+// ════════════════════════════════════════════════════
+let GAS_URL = localStorage.getItem('gas_url') || '';
+
+// ════════════════════════════════════════════════════
+// ② UTILS
+// ════════════════════════════════════════════════════
+const WEEKDAYS = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const todayDisplay = () => {
+  const d = new Date();
+  return `${d.getFullYear()} / ${d.getMonth()+1} / ${d.getDate()}`;
+};
+const todayWD = () => WEEKDAYS[new Date().getDay()];
+
+const fmtShort = s => {
+  if(!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return s;
+  return `${d.getMonth()+1}/${d.getDate()}`;
+};
+const fmtFull = s => {
+  if(!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return s;
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+};
+const isOverdue = dueDate => {
+  if(!dueDate) return false;
+  const due = new Date(dueDate + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return due < now;
+};
+const thisWeekRange = () => {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const week = new Date(now); week.setDate(week.getDate()+7);
+  return { now, week };
+};
+
+const PMAP = { P1:{badge:'p1-b',text:'p1-t',label:'極急'}, P2:{badge:'p2-b',text:'p2-t',label:'重要'}, P3:{badge:'p3-b',text:'p3-t',label:'一般'}, P4:{badge:'p4-b',text:'p4-t',label:'備忘'} };
+const pInfo = p => PMAP[p] || PMAP.P3;
+
+// ════════════════════════════════════════════════════
+// ③ API
+// ════════════════════════════════════════════════════
+const api = {
+  async get(action, params = {}) {
+    const qs = new URLSearchParams({ action, ...params }).toString();
+    const res = await fetch(`${GAS_URL}?${qs}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  async post(body) {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  getMeetings: d => api.get('getMeetings', { date: d }),
+  getTasks:    () => api.get('getTasks'),
+  getHistory:  () => api.get('getHistory'),
+  getMembers:  () => api.get('getMembers'),
+  addTask:     data => api.post({ action:'addTask', ...data }),
+  updateTask:  (id, data) => api.post({ action:'updateTask', id, ...data }),
+  closeTask:   (id, data) => api.post({ action:'closeTask', id, ...data }),
+};
+
+// ════════════════════════════════════════════════════
+// ④ SMALL COMPONENTS
+// ════════════════════════════════════════════════════
+const PBadge = ({ level }) => (
+  <div className={`p-badge ${pInfo(level).badge}`}>{level}</div>
+);
+
+const TaskRow = ({ task, onClick }) => {
+  const overdue = isOverdue(task.dueDate);
+  return (
+    <div className="t-row" onClick={() => onClick(task)}>
+      <PBadge level={task.priority} />
+      <span className={`t-title ${pInfo(task.priority).text}`}>{task.title}</span>
+      <div className="t-date-area">
+        {overdue && <span className="overdue-pill">逾期</span>}
+        <span className="t-date" style={{ color: overdue ? 'var(--red)' : '#bbb' }}>
+          {fmtShort(task.dueDate)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑤ DASHBOARD
+// ════════════════════════════════════════════════════
+const Dashboard = ({ meetings, tasks, onTaskClick }) => {
+  const p1cnt = tasks.filter(t => t.priority === 'P1').length;
+  const p2cnt = tasks.filter(t => t.priority === 'P2').length;
+  const overdueCnt = tasks.filter(t => isOverdue(t.dueDate)).length;
+  const { now, week } = thisWeekRange();
+  const weekCnt = tasks.filter(t => {
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate + 'T00:00:00');
+    return d >= now && d <= week;
+  }).length;
+
+  return (
+    <div>
+      <div className="date-bar">
+        <div>
+          <span className="date-main">{todayDisplay()}</span>
+          <span className="date-wd">{todayWD()}</span>
+        </div>
+        <span className="date-right">⟳ 今日 {meetings.length} 場</span>
+      </div>
+      <div className="stat-row">
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--orange)'}}>{p2cnt}</div><div className="stat-lbl">P2 重要</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{overdueCnt}</div><div className="stat-lbl">逾期</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--gray)'}}>{weekCnt}</div><div className="stat-lbl">本週到期</div></div>
+      </div>
+
+      <div style={{background:'var(--green-bg)'}}>
+        <div className="sec-hdr">
+          <div className="sec-hdr-left">
+            <div className="sec-dot" style={{background:'var(--green)'}}></div>
+            <span className="sec-title" style={{color:'var(--green)'}}>今日會議</span>
+          </div>
+          <span className="sec-count">{meetings.length} 場</span>
+        </div>
+      </div>
+      {meetings.map((m, i) => (
+        <div key={i} className={`m-row ${m.done ? 'done' : ''}`}>
+          <div className="m-dot" style={{background: m.done ? '#ddd' : 'var(--green-mid)'}} />
+          <span className="m-time">{m.startTime}–{m.endTime}</span>
+          <span className="m-title">{m.title}</span>
+        </div>
+      ))}
+      {meetings.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>今日無會議</div>}
+
+      <div style={{background:'var(--blue-bg)',marginTop:4}}>
+        <div className="sec-hdr">
+          <div className="sec-hdr-left">
+            <div className="sec-dot" style={{background:'var(--blue)'}}></div>
+            <span className="sec-title" style={{color:'var(--blue)'}}>工作任務</span>
+          </div>
+          <span className="sec-count">{tasks.length} 項</span>
+        </div>
+      </div>
+      {tasks.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
+      {tasks.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>無進行中任務</div>}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑥ MEETINGS PAGE
+// ════════════════════════════════════════════════════
+const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
+  const [expanded, setExpanded] = useState(null);
+
+  const toggleDone = (idx) => {
+    const updated = meetings.map((m, i) => i === idx ? { ...m, done: !m.done } : m);
+    setMeetings(updated);
+    const key = `meeting_done_${todayStr()}`;
+    const map = JSON.parse(localStorage.getItem(key) || '{}');
+    map[meetings[idx].title] = !meetings[idx].done;
+    localStorage.setItem(key, JSON.stringify(map));
+  };
+
+  return (
+    <div>
+      <div className="date-bar">
+        <div>
+          <span className="date-main">{todayDisplay()}</span>
+          <span className="date-wd">{todayWD()}</span>
+        </div>
+        <span className="date-right" onClick={onRefresh} style={{cursor:'pointer',color:'var(--blue)'}}>⟳ 重新同步</span>
+      </div>
+      {loading && <div className="spinner">同步中...</div>}
+      {!loading && meetings.length === 0 && <div className="empty">今日無會議安排</div>}
+      {meetings.map((m, i) => (
+        <div key={i}>
+          <div className={`m-row ${m.done ? 'done' : ''}`}>
+            <div
+              className="m-dot"
+              style={{ background: m.done ? '#ddd' : 'var(--green-mid)', cursor: 'pointer' }}
+              onClick={() => toggleDone(i)}
+            />
+            <span className="m-time">{m.startTime}–{m.endTime}</span>
+            <span className="m-title" onClick={() => setExpanded(expanded === i ? null : i)}>
+              {m.title}
+            </span>
+            <span className="m-arrow" onClick={() => setExpanded(expanded === i ? null : i)}>
+              {expanded === i ? '∨' : '›'}
+            </span>
+          </div>
+          {expanded === i && (
+            <div className="m-expand">
+              {m.location && <div>📍 {m.location}</div>}
+              {!m.location && !m.description && <div style={{color:'#bbb'}}>無詳細資訊</div>}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑦ TASK FORM PAGE (新增 / 編輯)
+// ════════════════════════════════════════════════════
+const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
+  const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr() };
+  const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
+    setSaving(true);
+    try { await onSave(form); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="form-wrap">
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">{mode === 'add' ? '新增任務' : '編輯任務'}</span>
+        <span></span>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">優先等級</span>
+          <select value={form.priority} onChange={e => set('priority', e.target.value)}>
+            <option value="P1">P1 極急</option>
+            <option value="P2">P2 重要</option>
+            <option value="P3">P3 一般</option>
+            <option value="P4">P4 備忘</option>
+          </select>
+        </div>
+        <div className="form-row">
+          <span className="f-label">追蹤事項</span>
+          <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">負責人</span>
+          <select value={form.owner} onChange={e => set('owner', e.target.value)}>
+            <option value="">— 選擇 —</option>
+            {members.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="form-row">
+          <span className="f-label">預定完成日</span>
+          <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+        </div>
+        <div className="form-row">
+          <span className="f-label">實際完成日</span>
+          <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>處理過程履歷</label>
+          <textarea
+            placeholder="記錄處理過程（可換行輸入）..."
+            value={form.progress}
+            rows={5}
+            onChange={e => set('progress', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>結案心得</label>
+          <textarea
+            placeholder="結案後的心得與改善方向..."
+            value={form.reflection}
+            rows={3}
+            onChange={e => set('reflection', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="created-row">
+          <span className="f-label" style={{fontSize:13,color:'var(--text-muted)'}}>立案日期</span>
+          <span className="created-val">{fmtFull(form.createdDate)}</span>
+        </div>
+      </div>
+
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? '儲存中...' : '存檔'}
+        </button>
+        <button className="btn btn-secondary" onClick={onBack}>取消</button>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑧ TASK DETAIL PAGE
+// ════════════════════════════════════════════════════
+const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed }) => {
+  const [editMode, setEditMode] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [current, setCurrent] = useState(task);
+  const overdue = isOverdue(current.dueDate);
+
+  const handleSave = async (data) => {
+    await api.updateTask(current.id, data);
+    setCurrent({ ...current, ...data });
+    onSaved(current.id, data);
+    setEditMode(false);
+  };
+
+  const handleClose = async () => {
+    if (!window.confirm('確定要結案此任務嗎？')) return;
+    setClosing(true);
+    const closeDate = current.completionDate || todayStr();
+    await api.closeTask(current.id, { ...current, completionDate: closeDate });
+    onClosed(current.id, { ...current, completionDate: closeDate });
+  };
+
+  if (editMode) return (
+    <TaskFormPage
+      initial={current}
+      members={members}
+      onBack={() => setEditMode(false)}
+      onSave={handleSave}
+      mode="edit"
+    />
+  );
+
+  return (
+    <div className="detail-wrap">
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <div style={{flex:1,display:'flex',alignItems:'center',gap:8,overflow:'hidden'}}>
+          <PBadge level={current.priority} />
+          <span style={{fontSize:15,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {current.title}
+          </span>
+        </div>
+        <span className="hdr-action" onClick={() => setEditMode(true)}>編輯</span>
+      </div>
+
+      <div className="detail-block">
+        <div className="detail-meta">
+          <div className="detail-field">
+            <div className="df-label">優先等級</div>
+            <div className={`df-value ${pInfo(current.priority).text}`}>{current.priority} {pInfo(current.priority).label}</div>
+          </div>
+          <div className="detail-field">
+            <div className="df-label">負責人</div>
+            <div className="df-value">{current.owner || '—'}</div>
+          </div>
+          <div className="detail-field">
+            <div className="df-label">預定完成日</div>
+            <div className="df-value" style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{color: overdue ? 'var(--red)' : 'inherit'}}>{fmtFull(current.dueDate)}</span>
+              {overdue && <span className="overdue-pill">逾期</span>}
+            </div>
+          </div>
+          {current.completionDate && (
+            <div className="detail-field">
+              <div className="df-label">實際完成日</div>
+              <div className="df-value">{fmtFull(current.completionDate)}</div>
+            </div>
+          )}
+          <div className="detail-field">
+            <div className="df-label">立案日期</div>
+            <div className="df-value">{fmtFull(current.createdDate)}</div>
+          </div>
+        </div>
+      </div>
+
+      {current.progress ? (
+        <div className="detail-block">
+          <div className="detail-text">
+            <div className="dt-label">處理過程履歷</div>
+            <div className="dt-value">{current.progress}</div>
+          </div>
+        </div>
+      ) : null}
+
+      {current.reflection ? (
+        <div className="detail-block">
+          <div className="detail-text">
+            <div className="dt-label">結案心得</div>
+            <div className="dt-value">{current.reflection}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="btn-row">
+        <button className="btn btn-close" onClick={handleClose} disabled={closing}>
+          {closing ? '結案中...' : '✓ 結案'}
+        </button>
+        <button className="btn btn-edit" onClick={() => setEditMode(true)}>編輯</button>
+        <button className="btn btn-secondary" onClick={onBack}>返回</button>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑨ TASKS PAGE
+// ════════════════════════════════════════════════════
+const TasksPage = ({ tasks, onTaskClick }) => (
+  <div>
+    {tasks.length === 0 && <div className="empty">無進行中任務 🎉</div>}
+    {tasks.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
+  </div>
+);
+
+// ════════════════════════════════════════════════════
+// ⑩ HISTORY PAGE
+// ════════════════════════════════════════════════════
+const HistoryPage = ({ history, onItemClick }) => {
+  const [query, setQuery] = useState('');
+
+  const filtered = history.filter(t => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (t.title || '').toLowerCase().includes(q) || (t.owner || '').toLowerCase().includes(q);
+  });
+
+  const grouped = {};
+  filtered.forEach(t => {
+    const d = t.completionDate ? new Date(t.completionDate + 'T00:00:00') : null;
+    const key = d && !isNaN(d) ? `${d.getFullYear()} 年 ${d.getMonth()+1} 月` : '未知';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(t);
+  });
+
+  return (
+    <div>
+      <div className="h-search">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/>
+          <line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input placeholder="搜尋關鍵字 / 負責人..." value={query} onChange={e => setQuery(e.target.value)} />
+        {query && <span onClick={() => setQuery('')} style={{cursor:'pointer',color:'#bbb',fontSize:20,lineHeight:1}}>×</span>}
+      </div>
+      {filtered.length === 0 && <div className="empty">查無結果</div>}
+      {Object.entries(grouped).map(([month, items]) => (
+        <div key={month}>
+          <div className="h-month">{month}</div>
+          {items.map((t, i) => (
+            <div key={i} className="h-row" onClick={() => onItemClick(t)}>
+              <div className="h-top">
+                <PBadge level={t.priority} />
+                <span className="h-title">{t.title}</span>
+                <span className="h-date">{fmtShort(t.completionDate)}</span>
+              </div>
+              <div className="h-meta">負責人：{t.owner || '—'}</div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑪ SETUP SCREEN
+// ════════════════════════════════════════════════════
+const SetupScreen = ({ onSave }) => {
+  const [url, setUrl] = useState('');
+  return (
+    <div className="setup-wrap">
+      <div style={{textAlign:'center',marginBottom:8}}>
+        <svg width="64" height="64" viewBox="0 0 72 72">
+          <rect x="8" y="8" width="26" height="26" rx="5" fill="#FCEBEB"/>
+          <text x="21" y="28" textAnchor="middle" fill="#A32D2D" fontSize="13" fontWeight="700" fontFamily="sans-serif">P1</text>
+          <rect x="38" y="8" width="26" height="26" rx="5" fill="#FAEEDA"/>
+          <text x="51" y="28" textAnchor="middle" fill="#854F0B" fontSize="13" fontWeight="700" fontFamily="sans-serif">P2</text>
+          <rect x="8" y="38" width="26" height="26" rx="5" fill="#f0f0f0"/>
+          <text x="21" y="58" textAnchor="middle" fill="#555" fontSize="13" fontWeight="700" fontFamily="sans-serif">P3</text>
+          <rect x="38" y="38" width="26" height="26" rx="5" fill="#EAF3DE"/>
+          <text x="51" y="58" textAnchor="middle" fill="#27500A" fontSize="13" fontWeight="700" fontFamily="sans-serif">P4</text>
+        </svg>
+      </div>
+      <div className="setup-title">工作追蹤設定</div>
+      <div className="setup-desc">
+        請先部署 Google Apps Script，取得網址後貼入下方：
+      </div>
+      <input
+        className="setup-input"
+        type="url"
+        placeholder="https://script.google.com/macros/s/.../exec"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+      />
+      <button
+        className="btn btn-primary"
+        onClick={() => { if(url.trim()) onSave(url.trim()); }}
+        style={{width:'100%',padding:13,borderRadius:10,fontSize:15}}
+      >
+        儲存並開始使用
+      </button>
+      <div style={{fontSize:12,color:'#bbb',lineHeight:1.7,textAlign:'center'}}>
+        詳見隨附的 apps-script.gs 說明
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑫ MAIN APP
+// ════════════════════════════════════════════════════
+const TAB_ICONS = {
+  dashboard: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.85"/>
+      <rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+    </svg>
+  ),
+  meetings: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <rect x="6" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <rect x="12" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <line x1="2" y1="9" x2="18" y2="9" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+    </svg>
+  ),
+  tasks: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="7" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="7" y1="12" x2="10.5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+    </svg>
+  ),
+  history: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <polyline points="10,6 10,10 13,12" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.6"/>
+    </svg>
+  ),
+};
+
+const App = () => {
+  const [gasUrl, setGasUrl] = useState(GAS_URL);
+  const [tab, setTab] = useState('dashboard');
+  const [meetings, setMeetings] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [meetLoading, setMeetLoading] = useState(false);
+  const [view, setView] = useState('list'); // 'list' | 'add' | 'detail' | 'historyDetail'
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [toast, setToast] = useState('');
+
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+
+  const saveGasUrl = url => {
+    localStorage.setItem('gas_url', url);
+    GAS_URL = url;
+    setGasUrl(url);
+  };
+
+  useEffect(() => { if (gasUrl) loadAll(); }, [gasUrl]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [t, h, mb] = await Promise.all([api.getTasks(), api.getHistory(), api.getMembers()]);
+      const sorted = (t.tasks || []).sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
+      setTasks(sorted);
+      setHistory(h.history || []);
+      setMembers(mb.members || []);
+    } catch (e) { showToast('⚠ 資料載入失敗'); }
+    setLoading(false);
+    loadMeetings();
+  };
+
+  const loadMeetings = async () => {
+    setMeetLoading(true);
+    try {
+      const res = await api.getMeetings(todayStr());
+      const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
+      const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
+      setMeetings(ms);
+    } catch (e) { console.warn('Meeting load failed', e); }
+    setMeetLoading(false);
+  };
+
+  const handleAddTask = async data => {
+    const newTask = { ...data, id: `T${Date.now()}` };
+    await api.addTask(newTask);
+    setTasks(prev => [...prev, newTask].sort((a,b) => new Date(a.dueDate||'9999')-new Date(b.dueDate||'9999')));
+    setView('list');
+    showToast('✓ 任務已新增');
+  };
+
+  const handleSavedTask = (id, data) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+    showToast('✓ 已更新');
+  };
+
+  const handleClosedTask = (id, data) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setHistory(prev => [{ ...data }, ...prev]);
+    setView('list');
+    showToast('✓ 任務已結案');
+  };
+
+  // ── Render overlay views ──
+  if (!gasUrl) return <SetupScreen onSave={saveGasUrl} />;
+
+  if (view === 'add') return (
+    <TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" />
+  );
+  if (view === 'detail' && selectedTask) return (
+    <TaskDetailPage
+      task={selectedTask} members={members}
+      onBack={() => setView('list')}
+      onSaved={handleSavedTask}
+      onClosed={handleClosedTask}
+    />
+  );
+  if (view === 'historyDetail' && selectedTask) return (
+    <TaskDetailPage
+      task={selectedTask} members={members}
+      onBack={() => setView('list')}
+      onSaved={() => {}}
+      onClosed={() => {}}
+    />
+  );
+
+  const renderContent = () => {
+    if (loading) return <div className="spinner">載入中...</div>;
+    switch (tab) {
+      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
+      case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading} />;
+      case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
+      case 'history': return <HistoryPage history={history} onItemClick={t => { setSelectedTask(t); setView('historyDetail'); }} />;
+    }
+  };
+
+  return (
+    <>
+      <div style={{height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <div className="scroll-area">{renderContent()}</div>
+
+        {tab === 'tasks' && (
+          <div className="fab" onClick={() => setView('add')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+              <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
+            </svg>
+          </div>
+        )}
+
+        <div className="tab-bar">
+          {[
+            { key:'dashboard', label:'戰情中心' },
+            { key:'meetings',  label:'今日會議' },
+            { key:'tasks',     label:'Tasks' },
+            { key:'history',   label:'歷史紀錄' },
+          ].map(({ key, label }) => (
+            <div key={key} className={`tab-item ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+              {TAB_ICONS[key]}
+              <span className="t-label">{label}</span>
+              <div className="t-bar" />
+            </div>
+          ))}
+        </div>
+      </div>
+      {toast && <div className="toast">{toast}</div>}
+    </>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
