@@ -360,7 +360,7 @@ const pInfo = p => PMAP[p] || PMAP.P3;
 // GET 請求無 preflight 問題，直接使用。
 // ────────────────────────────────────────────────────────
 
-const fetchWithTimeout = (url, options={}, ms=10000) => {
+const fetchWithTimeout = (url, options={}, ms=25000) => {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(t));
@@ -932,7 +932,7 @@ const App = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [toast, setToast] = useState('');
 
-  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 4000); };
 
   const saveGasUrl = url => {
     localStorage.setItem('gas_url', url);
@@ -942,24 +942,34 @@ const App = () => {
 
   useEffect(() => { if (gasUrl) loadAll(); }, [gasUrl]);
 
-  const loadAll = async () => {
+  const loadAll = async (isRetry = false) => {
     setLoading(true);
+    showToast(isRetry ? '🔄 重試中...' : '⟳ 載入中...');
     try {
-      // 單一請求取得所有資料，減少 GAS 冷啟動等待次數
       const res = await api.get('getAll', { date: todayStr() });
+      // 成功才更新資料，避免失敗時清空畫面
       const sorted = (res.tasks || []).sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
       setTasks(sorted);
-      setMembers(res.members || []);
-      // 會議資料也一起回來
+      if (res.members && res.members.length > 0) setMembers(res.members);
       const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
       const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
       setMeetings(ms);
+      showToast('✓ 載入完成');
+      // 背景載入歷史紀錄
+      loadHistory();
     } catch (e) {
-      showToast('⚠ 資料載入失敗');
+      const isTimeout = e.name === 'AbortError';
+      if (!isRetry) {
+        // 第一次失敗自動重試一次
+        showToast(isTimeout ? '⏳ GAS 預熱中，自動重試...' : '⚠ 載入失敗，重試中...');
+        setLoading(false);
+        setTimeout(() => loadAll(true), 2000);
+        return;
+      }
+      // 重試也失敗：保留舊資料，只顯示提示
+      showToast('⚠ 載入失敗，顯示舊資料');
     }
     setLoading(false);
-    // 單獨載入歷史紀錄（較慢，不阻塞主畫面）
-    loadHistory();
   };
 
   const loadHistory = async () => {
@@ -971,12 +981,17 @@ const App = () => {
 
   const loadMeetings = async () => {
     setMeetLoading(true);
+    showToast('⟳ 同步會議中...');
     try {
       const res = await api.getMeetings(todayStr());
       const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
       const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
       setMeetings(ms);
-    } catch (e) { console.warn('Meeting load failed', e); }
+      showToast('✓ 會議已同步');
+    } catch (e) {
+      showToast('⚠ 同步失敗，保留舊資料');
+      console.warn('Meeting load failed', e);
+    }
     setMeetLoading(false);
   };
 
