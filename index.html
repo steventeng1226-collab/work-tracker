@@ -463,7 +463,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
           <span className="date-main">{todayDisplay()}</span>
           <span className="date-wd">{todayWD()}</span>
         </div>
-        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.5</span></span>
+        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.6</span></span>
       </div>
       <div className="stat-row">
         <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
@@ -549,46 +549,50 @@ const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
         const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
         return (
           <div key={i}>
-            <div style={{
-              background: isDone ? '#f8f8f8' : '#fff',
-              padding:'10px 16px', borderBottom:'0.5px solid #f2f2f2',
-              display:'flex', alignItems:'center', gap:9,
-            }}>
-              <div
-                onClick={() => toggleDone(m.title)}
-                style={{
-                  width:20, height:20, borderRadius:'50%', flexShrink:0, cursor:'pointer',
-                  background: isDone ? '#ddd' : 'var(--green-mid)',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                }}
-              >
-                {isDone && <span style={{color:'#fff',fontSize:12,fontWeight:700}}>✓</span>}
+            {/* 整行點擊 = 切換完成；右側 › 箭頭 = 展開詳情 */}
+            <div
+              onClick={() => toggleDone(m.title)}
+              style={{
+                background: isDone ? '#f5f5f5' : '#fff',
+                padding:'12px 16px', borderBottom:'0.5px solid #f2f2f2',
+                display:'flex', alignItems:'center', gap:10, cursor:'pointer',
+                WebkitTapHighlightColor:'transparent',
+              }}
+            >
+              {/* 狀態圓點 */}
+              <div style={{
+                width:24, height:24, borderRadius:'50%', flexShrink:0,
+                background: isDone ? '#ddd' : '#1D9E75',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                {isDone
+                  ? <span style={{color:'#fff',fontSize:14,lineHeight:1}}>✓</span>
+                  : <span style={{width:8,height:8,borderRadius:'50%',background:'#fff',display:'block'}}/>
+                }
               </div>
+              {/* 時間 */}
               <span style={{
-                fontSize:12, width:74, flexShrink:0, whiteSpace:'nowrap',
-                color: isDone ? '#ccc' : '#555',
-                fontWeight: isDone ? 400 : 500,
+                fontSize:12, width:78, flexShrink:0, whiteSpace:'nowrap',
+                color: isDone ? '#ccc' : '#555', fontWeight: isDone ? 400 : 500,
                 textDecoration: isDone ? 'line-through' : 'none',
-              }}>{st}{et ? '–'+et : ''}</span>
+              }}>{st}{et?'–'+et:''}</span>
+              {/* 標題 */}
               <span style={{
                 flex:1, fontSize:14,
                 whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
                 color: isDone ? '#bbb' : '#1a1a1a',
                 fontWeight: isDone ? 400 : 600,
                 textDecoration: isDone ? 'line-through' : 'none',
-                cursor:'pointer',
-              }} onClick={() => setExpanded(expanded === i ? null : i)}>
-                {m.title}
-              </span>
-              <span style={{fontSize:16,color:'#ccc',flexShrink:0,cursor:'pointer'}}
-                onClick={() => setExpanded(expanded === i ? null : i)}>
-                {expanded === i ? '∨' : '›'}
-              </span>
+              }}>{m.title}</span>
+              {/* 展開箭頭（阻止冒泡，只展開不切換完成） */}
+              <span
+                onClick={e => { e.stopPropagation(); setExpanded(expanded===i?null:i); }}
+                style={{fontSize:18,color:'#ccc',flexShrink:0,padding:'0 4px'}}
+              >{expanded===i?'∨':'›'}</span>
             </div>
             {expanded === i && (
-              <div className="m-expand">
-                {m.location && <div>📍 {m.location}</div>}
-                {!m.location && <div style={{color:'#bbb'}}>無詳細資訊</div>}
+              <div style={{background:'#f9f9f9',padding:'10px 16px 10px 50px',borderBottom:'0.5px solid #f2f2f2',fontSize:13,color:'#666',lineHeight:1.7}}>
+                {m.location ? <div>📍 {m.location}</div> : <div style={{color:'#bbb'}}>無詳細資訊</div>}
               </div>
             )}
           </div>
