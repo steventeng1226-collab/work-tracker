@@ -302,6 +302,31 @@ const fmtShort = s => {
   if(isNaN(d)) return s;
   return `${d.getMonth()+1}/${d.getDate()}`;
 };
+
+// 將 UTC ISO 字串轉為手機本地時間 HH:MM（跟著手機時區走）
+const utcToLocalTime = utcISO => {
+  if (!utcISO) return '';
+  try {
+    const d = new Date(utcISO);
+    if (isNaN(d)) return '';
+    const h  = d.getHours();
+    const mi = d.getMinutes();
+    return (h < 10 ? '0'+h : h) + ':' + (mi < 10 ? '0'+mi : mi);
+  } catch(e) { return ''; }
+};
+
+// 將 UTC ISO 字串轉為手機本地日期 YYYY-MM-DD
+const utcToLocalDate = utcISO => {
+  if (!utcISO) return '';
+  try {
+    const d = new Date(utcISO);
+    if (isNaN(d)) return '';
+    const y  = d.getFullYear();
+    const mo = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    return `${y}-${mo}-${dy}`;
+  } catch(e) { return ''; }
+};
 const fmtFull = s => {
   if(!s) return '—';
   const d = new Date(s + 'T00:00:00');
@@ -456,13 +481,17 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
           <span className="sec-count">{meetings.length} 場</span>
         </div>
       </div>
-      {meetings.map((m, i) => (
-        <div key={i} className={`m-row ${m.done ? 'done' : ''}`}>
-          <div className="m-dot" style={{background: m.done ? '#ddd' : 'var(--green-mid)'}} />
-          <span className="m-time">{m.startTime}–{m.endTime}</span>
-          <span className="m-title" style={m.done?{textDecoration:'line-through',color:'#ccc',fontWeight:400}:{fontWeight:600,color:'#1a1a1a'}}>{m.title}</span>
-        </div>
-      ))}
+      {meetings.map((m, i) => {
+        const st = (m.startUTC ? utcToLocalTime(m.startUTC) : m.startTime) || m.startTime;
+        const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
+        return (
+          <div key={i} className={`m-row ${m.done ? 'done' : ''}`}>
+            <div className="m-dot" style={{background: m.done ? '#ddd' : 'var(--green-mid)'}} />
+            <span className="m-time">{st}{et ? '–'+et : ''}</span>
+            <span className="m-title" style={m.done?{textDecoration:'line-through',color:'#ccc',fontWeight:400}:{fontWeight:600,color:'#1a1a1a'}}>{m.title}</span>
+          </div>
+        );
+      })}
       {meetings.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>今日無會議</div>}
 
       <div style={{background:'var(--blue-bg)',marginTop:4}}>
@@ -506,30 +535,34 @@ const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
       </div>
       {loading && <div className="spinner">同步中...</div>}
       {!loading && meetings.length === 0 && <div className="empty">今日無會議安排</div>}
-      {meetings.map((m, i) => (
-        <div key={i}>
-          <div className={`m-row ${m.done ? 'done' : ''}`}>
-            <div
-              className="m-dot"
-              style={{ background: m.done ? '#ddd' : 'var(--green-mid)', cursor: 'pointer' }}
-              onClick={() => toggleDone(i)}
-            />
-            <span className="m-time">{m.startTime}–{m.endTime}</span>
-            <span className="m-title" onClick={() => setExpanded(expanded === i ? null : i)}>
-              {m.title}
-            </span>
-            <span className="m-arrow" onClick={() => setExpanded(expanded === i ? null : i)}>
-              {expanded === i ? '∨' : '›'}
-            </span>
-          </div>
-          {expanded === i && (
-            <div className="m-expand">
-              {m.location && <div>📍 {m.location}</div>}
-              {!m.location && !m.description && <div style={{color:'#bbb'}}>無詳細資訊</div>}
+      {meetings.map((m, i) => {
+        const st = (m.startUTC ? utcToLocalTime(m.startUTC) : m.startTime) || m.startTime;
+        const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
+        return (
+          <div key={i}>
+            <div className={`m-row ${m.done ? 'done' : ''}`}>
+              <div
+                className="m-dot"
+                style={{ background: m.done ? '#ddd' : 'var(--green-mid)', cursor: 'pointer' }}
+                onClick={() => toggleDone(i)}
+              />
+              <span className="m-time">{st}{et ? '–'+et : ''}</span>
+              <span className="m-title" onClick={() => setExpanded(expanded === i ? null : i)}>
+                {m.title}
+              </span>
+              <span className="m-arrow" onClick={() => setExpanded(expanded === i ? null : i)}>
+                {expanded === i ? '∨' : '›'}
+              </span>
             </div>
-          )}
-        </div>
-      ))}
+            {expanded === i && (
+              <div className="m-expand">
+                {m.location && <div>📍 {m.location}</div>}
+                {!m.location && !m.description && <div style={{color:'#bbb'}}>無詳細資訊</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
