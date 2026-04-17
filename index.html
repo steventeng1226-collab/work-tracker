@@ -945,14 +945,28 @@ const App = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [t, h, mb] = await Promise.all([api.getTasks(), api.getHistory(), api.getMembers()]);
-      const sorted = (t.tasks || []).sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
+      // 單一請求取得所有資料，減少 GAS 冷啟動等待次數
+      const res = await api.get('getAll', { date: todayStr() });
+      const sorted = (res.tasks || []).sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
       setTasks(sorted);
-      setHistory(h.history || []);
-      setMembers(mb.members || []);
-    } catch (e) { showToast('⚠ 資料載入失敗'); }
+      setMembers(res.members || []);
+      // 會議資料也一起回來
+      const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
+      const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
+      setMeetings(ms);
+    } catch (e) {
+      showToast('⚠ 資料載入失敗');
+    }
     setLoading(false);
-    loadMeetings();
+    // 單獨載入歷史紀錄（較慢，不阻塞主畫面）
+    loadHistory();
+  };
+
+  const loadHistory = async () => {
+    try {
+      const h = await api.getHistory();
+      setHistory(h.history || []);
+    } catch(e) { /* 歷史紀錄載入失敗不影響主功能 */ }
   };
 
   const loadMeetings = async () => {
@@ -1010,7 +1024,7 @@ const App = () => {
   );
 
   const renderContent = () => {
-    if (loading) return <div className="spinner">載入中...</div>;
+    if (loading) return <div className="spinner" style={{flexDirection:"column",gap:12}}><div style={{fontSize:28}}>⟳</div><div>載入中，首次約需 5-10 秒...</div></div>;
     switch (tab) {
       case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
       case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading} />;
