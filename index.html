@@ -1,723 +1,1210 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="工作追蹤"/>
-<title>工作追蹤系統</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="工作追蹤">
+<meta name="application-name" content="工作追蹤">
+<meta name="theme-color" content="#ffffff">
+<title>工作追蹤</title>
+<script>
+(function(){
+  function makeIcon(size) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const gap = Math.round(size * 0.04);
+    const half = Math.round((size - gap * 3) / 2);
+    const r = Math.round(size * 0.10);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(0,0,size,size,size*0.18);
+    else ctx.rect(0,0,size,size);
+    ctx.fill();
+    const cells=[
+      {x:gap,       y:gap,       bg:'#FCEBEB',fg:'#A32D2D',t:'P1'},
+      {x:gap*2+half,y:gap,       bg:'#FAEEDA',fg:'#854F0B',t:'P2'},
+      {x:gap,       y:gap*2+half,bg:'#f0f0f0',fg:'#555555',t:'P3'},
+      {x:gap*2+half,y:gap*2+half,bg:'#EAF3DE',fg:'#27500A',t:'P4'},
+    ];
+    cells.forEach(({x,y,bg,fg,t})=>{
+      ctx.fillStyle=bg;
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(x,y,half,half,r);
+      else ctx.rect(x,y,half,half);
+      ctx.fill();
+      ctx.fillStyle=fg;
+      ctx.font=`bold ${Math.round(half*0.38)}px sans-serif`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(t,x+half/2,y+half/2);
+    });
+    return c.toDataURL('image/png');
+  }
+  window.addEventListener('DOMContentLoaded',function(){
+    try{
+      const i192=makeIcon(192);
+      const i512=makeIcon(512);
+      const manifest={name:'工作追蹤',short_name:'工作追蹤',start_url:'./',display:'standalone',background_color:'#ffffff',theme_color:'#ffffff',orientation:'portrait',icons:[{src:i192,sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:i512,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+      const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+      const ml=document.createElement('link');ml.rel='manifest';ml.href=URL.createObjectURL(blob);document.head.appendChild(ml);
+      const al=document.createElement('link');al.rel='apple-touch-icon';al.href=i192;document.head.appendChild(al);
+    }catch(e){console.warn('icon err',e);}
+  });
+})();
+</script>
 <style>
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
-  background:#f5f5f7;overscroll-behavior:none}
-input,textarea,button,select{font-family:inherit}
-input[type=date]::-webkit-inner-spin-button,
-input[type=date]::-webkit-calendar-picker-indicator{opacity:1}
-::-webkit-scrollbar{width:0}
+:root {
+  --red: #E24B4A; --orange: #EF9F27; --green: #3B6D11; --blue: #185FA5;
+  --red-bg: #FCEBEB; --red-dark: #A32D2D;
+  --orange-bg: #FAEEDA; --orange-dark: #854F0B;
+  --green-bg: #EAF3DE; --green-mid: #1D9E75;
+  --blue-bg: #EBF3FA;
+  --gray: #888; --gray-light: #f0f0f0;
+  --text: #1a1a1a; --text-muted: #999; --text-hint: #ccc;
+  --border: #eeeeee; --divider: #f2f2f2;
+  --bg: #f5f5f5; --card: #ffffff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', 'Heiti TC', sans-serif;
+  background: var(--bg); color: var(--text);
+  max-width: 430px; margin: 0 auto; min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+#root { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Scroll ── */
+.scroll-area {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 76px;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ── Tab Bar ── */
+.tab-bar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px;
+  background: var(--card); border-top: 0.5px solid var(--border);
+  display: flex; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 200;
+}
+.tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 2px 0; }
+.tab-item .t-label { font-size: 10px; color: #bbb; transition: color 0.15s; }
+.tab-item.active .t-label { color: var(--red); font-weight: 500; }
+.tab-item .t-bar { width: 18px; height: 2px; border-radius: 1px; background: transparent; transition: background 0.15s; }
+.tab-item.active .t-bar { background: var(--red); }
+
+/* ── Header row ── */
+.date-bar {
+  background: var(--card); padding: 15px 16px 11px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 0.5px solid var(--border);
+}
+.date-main { font-size: 22px; font-weight: 600; color: var(--text); }
+.date-wd { font-size: 13px; color: var(--text-muted); margin-left: 8px; }
+.date-right { font-size: 11px; color: var(--text-muted); }
+
+/* ── Stat cards ── */
+.stat-row { display: flex; gap: 6px; padding: 10px 12px 8px; background: var(--card); border-bottom: 0.5px solid var(--border); }
+.stat-card { flex: 1; background: #fafafa; border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; }
+.stat-num { font-size: 20px; font-weight: 600; }
+.stat-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Section header ── */
+.sec-hdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 5px; }
+.sec-hdr-left { display: flex; align-items: center; gap: 5px; }
+.sec-dot { width: 7px; height: 7px; border-radius: 2px; }
+.sec-title { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; }
+.sec-count { font-size: 11px; color: var(--text-muted); }
+
+/* ── Meeting row ── */
+.m-row {
+  background: var(--card); padding: 10px 16px;
+  border-bottom: 0.5px solid var(--divider);
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  transition: background 0.1s;
+}
+.m-row:active { background: #f8f8f8; }
+.m-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: background 0.2s; }
+/* 未完成的會議：粗體黑色 */
+.m-time { font-size: 12px; color: #555; width: 74px; flex-shrink: 0; white-space: nowrap; font-weight: 500; }
+.m-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-arrow { font-size: 16px; color: var(--text-hint); flex-shrink: 0; }
+/* 已完成的會議：刪除線＋淺灰色 */
+.m-row.done .m-time { text-decoration: line-through; color: #ccc; font-weight: 400; }
+.m-row.done .m-title { text-decoration: line-through; color: #ccc; font-weight: 400; }
+.m-row.done .m-dot { background: #ddd !important; }
+.m-row.done { background: #fafafa; }
+.m-expand { background: #f9f9f9; padding: 10px 16px 10px 40px; border-bottom: 0.5px solid var(--divider); font-size: 13px; color: #666; line-height: 1.7; }
+
+/* ── Task row ── */
+.t-row {
+  background: var(--card); padding: 10px 16px;
+  border-bottom: 0.5px solid var(--divider);
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  transition: background 0.1s;
+}
+.t-row:active { background: #f8f8f8; }
+.p-badge { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.p1-b { background: var(--red-bg); color: var(--red-dark); }
+.p2-b { background: var(--orange-bg); color: var(--orange-dark); }
+.p3-b { background: var(--gray-light); color: #555; }
+.p4-b { background: var(--green-bg); color: #27500A; }
+.t-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p1-t { color: var(--red); }
+.p2-t { color: var(--orange); }
+.p3-t { color: var(--text); }
+.p4-t { color: var(--green); }
+.t-date-area { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.overdue-pill { background: var(--red-bg); color: var(--red-dark); font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
+.t-date { font-size: 11px; }
+
+/* ── Page headers (detail / form) ── */
+.page-hdr {
+  background: var(--card); padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 0.5px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.page-hdr-title { flex: 1; font-size: 17px; font-weight: 500; }
+.back-btn { font-size: 26px; color: var(--text-muted); cursor: pointer; line-height: 1; padding-right: 4px; }
+.hdr-action { font-size: 13px; color: var(--blue); cursor: pointer; font-weight: 500; }
+
+/* ── Form ── */
+.form-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
+.form-section { background: var(--card); margin-bottom: 8px; }
+.form-row { padding: 12px 16px; border-bottom: 0.5px solid #f7f7f7; display: flex; align-items: center; gap: 12px; }
+.form-row:last-child { border-bottom: none; }
+.f-label { font-size: 13px; color: var(--text-muted); width: 82px; flex-shrink: 0; }
+.form-row input, .form-row select {
+  flex: 1; border: none; outline: none; font-size: 14px;
+  background: transparent; color: var(--text); font-family: inherit;
+  -webkit-appearance: none;
+}
+.form-row input::placeholder { color: var(--text-hint); }
+.form-textarea-wrap { padding: 12px 16px; }
+.form-textarea-wrap label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 8px; }
+.form-textarea-wrap textarea {
+  width: 100%; border: none; outline: none; font-size: 14px;
+  background: transparent; color: var(--text); font-family: inherit;
+  resize: none; min-height: 100px; line-height: 1.7;
+}
+.form-textarea-wrap textarea::placeholder { color: var(--text-hint); }
+.created-row { padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.created-val { font-size: 14px; color: var(--text-muted); }
+
+/* ── Buttons ── */
+.btn-row { display: flex; gap: 10px; padding: 16px; }
+.btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+.btn:active { opacity: 0.75; }
+.btn-primary { background: var(--red); color: #fff; }
+.btn-close { background: var(--orange-bg); color: var(--orange-dark); }
+.btn-secondary { background: var(--gray-light); color: #555; }
+.btn-edit { background: var(--blue-bg); color: var(--blue); }
+
+/* ── Detail ── */
+.detail-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
+.detail-block { background: var(--card); margin-bottom: 8px; }
+.detail-meta { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 18px; }
+.detail-field { }
+.df-label { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+.df-value { font-size: 14px; color: var(--text); }
+.detail-text { padding: 12px 16px; }
+.dt-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.dt-value { font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+
+/* ── History ── */
+.h-search {
+  margin: 10px 14px;
+  background: var(--card); border: 0.5px solid var(--border);
+  border-radius: 9px; padding: 9px 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.h-search input { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; font-family: inherit; color: var(--text); }
+.h-search input::placeholder { color: var(--text-hint); }
+.h-month { padding: 8px 16px 4px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; background: var(--bg); }
+.h-row { background: var(--card); padding: 10px 16px; border-bottom: 0.5px solid var(--divider); cursor: pointer; }
+.h-row:active { background: #f8f8f8; }
+.h-top { display: flex; align-items: center; gap: 8px; }
+.h-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.h-meta { font-size: 12px; color: #bbb; padding-left: 28px; margin-top: 3px; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 80px; right: 20px;
+  width: 50px; height: 50px;
+  background: var(--red); border-radius: 25px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 3px 10px rgba(226,75,74,0.45); z-index: 150;
+  transition: transform 0.15s;
+}
+.fab:active { transform: scale(0.92); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(30,30,30,0.85); color: #fff;
+  padding: 9px 18px; border-radius: 20px; font-size: 13px;
+  z-index: 999; white-space: nowrap; pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform: translateX(-50%) translateY(-6px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+/* ── Loading / Empty ── */
+.spinner { display: flex; align-items: center; justify-content: center; padding: 48px 16px; color: var(--text-muted); font-size: 14px; }
+.empty { text-align: center; padding: 48px 16px; color: var(--text-hint); font-size: 14px; }
+
+/* ── Setup screen ── */
+.setup-wrap { padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; }
+.setup-title { font-size: 20px; font-weight: 600; }
+.setup-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+.setup-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
+.setup-input:focus { border-color: var(--red); }
 </style>
 </head>
 <body>
 <div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
 <script type="text/babel">
-const{useState,useEffect,useCallback,useRef}=React;
+const { useState, useEffect, useCallback, useRef } = React;
 
-// ── 常數 ──────────────────────────────────────────────────────────
-const PRIORITY={
-  P1:{label:"P1 極急",color:"#ef4444",light:"#fef2f2"},
-  P2:{label:"P2 重要",color:"#f97316",light:"#fff7ed"},
-  P3:{label:"P3 一般", color:"#6b7280",light:"#f9fafb"},
-  P4:{label:"P4 備忘", color:"#22c55e",light:"#f0fdf4"},
+// ════════════════════════════════════════════════════
+// ① CONFIG  ← 部署 Apps Script 後填入 URL
+// ════════════════════════════════════════════════════
+let GAS_URL = localStorage.getItem('gas_url') || '';
+
+// ════════════════════════════════════════════════════
+// ② UTILS
+// ════════════════════════════════════════════════════
+const WEEKDAYS = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
-const NAV=[
-  {id:"today",icon:"📅",label:"今日會議"},
-  {id:"tasks",icon:"🚩",label:"Tasks"},
-  {id:"history",icon:"📋",label:"歷史"},
-  {id:"dashboard",icon:"🎯",label:"戰情中心"},
-];
+const todayDisplay = () => {
+  const d = new Date();
+  return `${d.getFullYear()} / ${d.getMonth()+1} / ${d.getDate()}`;
+};
+const todayWD = () => WEEKDAYS[new Date().getDay()];
 
-// ── 工具 ──────────────────────────────────────────────────────────
-const genId=()=>`${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-const isoToDisplay=iso=>{if(!iso)return"";const[y,m,d]=iso.split("-");return`${y}/${+m}/${+d}`;};
-const todayISO=()=>new Date().toISOString().split("T")[0];
-const todayDisplay=()=>{const d=new Date();return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;};
-const isOverdue=iso=>!!iso&&new Date(iso)<new Date(new Date().toDateString());
-
-// ── localStorage ─────────────────────────────────────────────────
-const lsGet=k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}};
-const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){console.error(e);}};
-
-const blankTask=(o={})=>({
-  id:null,title:"",priority:"P2",owner:"",
-  plannedDate:"",actualDate:"",processHistory:"",
-  closingNotes:"",caseDate:todayISO(),...o
-});
-
-// ── CSV 匯出 ────────────────────────────────────────────────────
-const exportCSV=(tasks,history)=>{
-  const all=[...tasks.map(t=>({...t,_s:"進行中"})),...history.map(t=>({...t,_s:"已完成"}))];
-  const cols=["_s","priority","title","owner","plannedDate","actualDate","caseDate","processHistory","closingNotes"];
-  const hd=["狀態","優先等級","追蹤事項","負責人","預定完成日","實際完成日","立案日期","處理過程履歷","結案心得"];
-  const rows=[hd,...all.map(t=>cols.map(c=>`"${(t[c]||"").toString().replace(/"/g,'""')}"`))]
-    .map(r=>r.join(",")).join("\n");
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob(["\uFEFF"+rows],{type:"text/csv;charset=utf-8;"}));
-  a.download=`工作追蹤_${todayISO()}.csv`;a.click();
+const fmtShort = s => {
+  if(!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return s;
+  return `${d.getMonth()+1}/${d.getDate()}`;
 };
 
-// ── 共用 UI ──────────────────────────────────────────────────────
-const Lbl=({c})=><div style={{fontSize:11,fontWeight:700,color:"#9ca3af",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.07em"}}>{c}</div>;
+// 將 UTC ISO 字串轉為手機本地時間 HH:MM（跟著手機時區走）
+const utcToLocalTime = utcISO => {
+  if (!utcISO) return '';
+  try {
+    const d = new Date(utcISO);
+    if (isNaN(d)) return '';
+    const h  = d.getHours();
+    const mi = d.getMinutes();
+    return (h < 10 ? '0'+h : h) + ':' + (mi < 10 ? '0'+mi : mi);
+  } catch(e) { return ''; }
+};
 
-const Inp=({value,onChange,placeholder,type="text",disabled})=>(
-  <input type={type} value={value??""} onChange={e=>onChange(e.target.value)}
-    placeholder={placeholder} disabled={disabled}
-    style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"10px 12px",fontSize:15,
-      boxSizing:"border-box",outline:"none",color:"#111827",
-      background:disabled?"#f3f4f6":"#fafafa",WebkitAppearance:"none"}}/>
-);
+// 將 UTC ISO 字串轉為手機本地日期 YYYY-MM-DD
+const utcToLocalDate = utcISO => {
+  if (!utcISO) return '';
+  try {
+    const d = new Date(utcISO);
+    if (isNaN(d)) return '';
+    const y  = d.getFullYear();
+    const mo = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    return `${y}-${mo}-${dy}`;
+  } catch(e) { return ''; }
+};
+const fmtFull = s => {
+  if(!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return s;
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+};
+const isOverdue = dueDate => {
+  if(!dueDate) return false;
+  const due = new Date(dueDate + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return due < now;
+};
 
-const Txta=({value,onChange,placeholder,rows=3})=>(
-  <textarea value={value??""} onChange={e=>onChange(e.target.value)}
-    placeholder={placeholder} rows={rows}
-    style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"10px 12px",fontSize:14,
-      boxSizing:"border-box",resize:"none",outline:"none",
-      color:"#374151",background:"#fafafa",lineHeight:1.6}}/>
-);
+// 判斷會議是否已結束（結束時間 < 現在時間）
+const isMeetingOver = (m) => {
+  try {
+    // 優先用 UTC ISO 判斷
+    if (m.endUTC) return new Date(m.endUTC) < new Date();
+    // 備用：用今天日期 + endTime 判斷
+    const endStr = m.endTime || m.startTime;
+    if (!endStr) return false;
+    const today = todayStr();
+    return new Date(today + 'T' + endStr + ':00') < new Date();
+  } catch(e) { return false; }
+};
+const thisWeekRange = () => {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const week = new Date(now); week.setDate(week.getDate()+7);
+  return { now, week };
+};
 
-const Btn=({onClick,children,color="#3b82f6",outline,disabled,style={}})=>(
-  <button onClick={onClick} disabled={disabled}
-    style={{border:outline?`1.5px solid ${color}`:"none",borderRadius:10,
-      cursor:disabled?"not-allowed":"pointer",padding:"11px 16px",fontSize:14,fontWeight:600,
-      background:outline?"#fff":color,color:outline?color:"#fff",
-      opacity:disabled?.6:1,WebkitAppearance:"none",...style}}>
-    {children}
-  </button>
-);
+// 標準化優先等級：Sheets 可能存 "P1 緊急" 或 "P1"，統一取 P1~P4
+const normP = p => { const m = String(p||'').match(/P[1-4]/); return m ? m[0] : 'P3'; };
+const PMAP = { P1:{badge:'p1-b',text:'p1-t',label:'緊急'}, P2:{badge:'p2-b',text:'p2-t',label:'重要'}, P3:{badge:'p3-b',text:'p3-t',label:'一般'}, P4:{badge:'p4-b',text:'p4-t',label:'備忘'} };
+const pInfo = p => PMAP[p] || PMAP.P3;
 
-const IBtn=({onClick,emoji,bg="#f3f4f6",title,sz=34})=>(
-  <button onClick={onClick} title={title}
-    style={{border:"none",background:bg,borderRadius:8,width:sz,height:sz,
-      cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",
-      justifyContent:"center",flexShrink:0,WebkitAppearance:"none"}}>
-    {emoji}
-  </button>
-);
+// ════════════════════════════════════════════════════
+// ③ API
+// ════════════════════════════════════════════════════
+// ── Apps Script CORS 說明 ──────────────────────────────────
+// GAS 不支援 CORS preflight（OPTIONS），
+// 所以 POST 必須用 text/plain（不觸發 preflight），
+// GAS 端用 e.postData.contents 解析 JSON 字串。
+// GET 請求無 preflight 問題，直接使用。
+// ────────────────────────────────────────────────────────
 
-// ── Modal ─────────────────────────────────────────────────────────
-const Modal=({title,onClose,children})=>(
-  <div onClick={onClose}
-    style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",
-      zIndex:400,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-    <div onClick={e=>e.stopPropagation()}
-      style={{background:"#fff",borderRadius:"22px 22px 0 0",
-        width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",
-        padding:"6px 16px 60px"}}>
-      <div style={{width:38,height:5,background:"#e5e7eb",
-        borderRadius:3,margin:"14px auto 16px"}}/>
-      <div style={{display:"flex",justifyContent:"space-between",
-        alignItems:"center",marginBottom:18}}>
-        <span style={{fontSize:17,fontWeight:800,color:"#111827"}}>{title}</span>
-        <button onClick={onClose}
-          style={{border:"none",background:"none",fontSize:24,
-            cursor:"pointer",color:"#9ca3af",lineHeight:1,padding:"0 4px"}}>✕</button>
-      </div>
-      {children}
+const fetchWithTimeout = (url, options={}, ms=25000) => {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(t));
+};
+
+const api = {
+  async get(action, params = {}) {
+    if (!GAS_URL) throw new Error('尚未設定 Apps Script 網址');
+    const qs = new URLSearchParams({ action, ...params }).toString();
+    const res = await fetchWithTimeout(`${GAS_URL}?${qs}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  },
+  async post(body) {
+    if (!GAS_URL) throw new Error('尚未設定 Apps Script 網址');
+    // 使用 text/plain 避免 CORS preflight，GAS 端解析 JSON 字串
+    const res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  },
+  getMeetings: d => api.get('getMeetings', { date: d }),
+  getTasks:    () => api.get('getTasks'),
+  getHistory:  () => api.get('getHistory'),
+  getMembers:  () => api.get('getMembers'),
+  addTask:     data => api.post({ action:'addTask', ...data }),
+  updateTask:  (id, data) => api.post({ action:'updateTask', id, ...data }),
+  closeTask:    (id, data) => api.post({ action:'closeTask', id, ...data }),
+  deleteTask:   id => api.post({ action:'deleteTask', id }),
+  deleteHistory: id => api.post({ action:'deleteHistory', id }),
+};
+
+// ════════════════════════════════════════════════════
+// ④ SMALL COMPONENTS
+// ════════════════════════════════════════════════════
+const PBadge = ({ level }) => {
+  const p = normP(level);
+  const BG  = {P1:'#FCEBEB', P2:'#FAEEDA', P3:'#f0f0f0', P4:'#EAF3DE'};
+  const COL = {P1:'#A32D2D', P2:'#854F0B', P3:'#555555', P4:'#27500A'};
+  const LBL = {P1:'緊急',    P2:'重要',    P3:'一般',    P4:'備忘'};
+  return (
+    <div style={{
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      width:34, minWidth:34, height:36, borderRadius:6, flexShrink:0,
+      background: BG[p], border:'none',
+    }}>
+      <span style={{fontSize:11, fontWeight:600, lineHeight:1.2, color:COL[p]}}>{p}</span>
+      <span style={{fontSize:9,  fontWeight:400, lineHeight:1.2, color:COL[p]}}>{LBL[p]}</span>
     </div>
-  </div>
-);
+  );
+};
 
-// ── Toast ─────────────────────────────────────────────────────────
-const Toast=({msg,type})=>{
-  if(!msg)return null;
-  const bg=type==="ok"?"#16a34a":type==="err"?"#ef4444":"#374151";
-  return(
-    <div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",
-      background:bg,color:"#fff",borderRadius:12,padding:"10px 20px",
-      fontSize:13,fontWeight:600,zIndex:999,
-      boxShadow:"0 4px 20px rgba(0,0,0,0.2)",whiteSpace:"nowrap",
-      maxWidth:"90vw",textAlign:"center"}}>
-      {msg}
+const PCOL = { P1:'#E24B4A', P2:'#EF9F27', P3:'#1a1a1a', P4:'#3B6D11' }; // P1=紅 P2=橘 P3=黑 P4=綠
+
+const TaskRow = ({ task, onClick }) => {
+  const p = normP(task.priority);
+  const overdue = isOverdue(task.dueDate);
+  // P2 逾期 → 紅色；其他依優先等級（P1紅/P2橘/P3黑/P4綠）
+  const titleColor = (p === 'P2' && overdue) ? '#E24B4A' : (PCOL[p] || '#1a1a1a');
+  return (
+    <div className="t-row" onClick={() => onClick(task)}>
+      <PBadge level={p} />
+      <span style={{
+        flex:1, fontSize:14, whiteSpace:'nowrap', overflow:'hidden',
+        textOverflow:'ellipsis', color: titleColor, fontWeight: 400,
+      }}>{task.title}</span>
+      <div className="t-date-area">
+        {overdue && <span className="overdue-pill">逾期</span>}
+        <span style={{ fontSize:11, color: overdue ? '#E24B4A' : '#bbb' }}>
+          {fmtShort(task.dueDate)}
+        </span>
+      </div>
     </div>
   );
 };
 
-// ── 設定 Modal ────────────────────────────────────────────────────
-const SettingsModal=({gasUrl,onSave,onPush,onPull,pushing,pulling,syncLog,onClose})=>{
-  const[url,setUrl]=useState(gasUrl);
-  return(
-    <Modal title="⚙️ 設定 / Google Sheets 同步" onClose={onClose}>
-      <div style={{marginBottom:14}}>
-        <Lbl c="Google Apps Script 部署網址"/>
-        <Inp value={url} onChange={setUrl} placeholder="https://script.google.com/macros/s/.../exec"/>
-        <div style={{fontSize:11,color:"#9ca3af",marginTop:6,lineHeight:1.7}}>
-          📋 安裝 gas-sync.js → Apps Script → 部署為網頁應用程式 → 複製網址貼入此處
-        </div>
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <Btn onClick={()=>{onSave(url);onPull(url);}}
-          disabled={!url.trim()||pulling} color="#16a34a" style={{flex:1,fontSize:13,padding:"10px 8px"}}>
-          {pulling?"⏳ 拉取中...":"⬇️ 從 Sheets 拉取"}
-        </Btn>
-        <Btn onClick={()=>{onSave(url);onPush(url);}}
-          disabled={!url.trim()||pushing} style={{flex:1,fontSize:13,padding:"10px 8px"}}>
-          {pushing?"⏳ 推送中...":"⬆️ 推送至 Sheets"}
-        </Btn>
-      </div>
-      {syncLog.length>0&&(
-        <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",
-          marginBottom:14,maxHeight:130,overflowY:"auto"}}>
-          {syncLog.map((l,i)=>(
-            <div key={i} style={{fontSize:12,marginBottom:3,
-              color:l.includes("✅")?"#16a34a":l.includes("❌")?"#ef4444":"#6b7280"}}>{l}</div>
-          ))}
-        </div>
-      )}
-      <div style={{background:"#fffbeb",borderRadius:10,padding:"11px 13px",marginBottom:14}}>
-        <div style={{fontSize:12,color:"#92400e",lineHeight:1.8}}>
-          <b>同步說明</b><br/>
-          ⬇️ 拉取：Sheets → APP（以 Sheets 為準）<br/>
-          ⬆️ 推送：APP → Sheets（以 APP 為準）
-        </div>
-      </div>
-      <Btn onClick={onClose} outline color="#6b7280" style={{width:"100%"}}>關閉</Btn>
-    </Modal>
-  );
-};
+// ════════════════════════════════════════════════════
+// ⑤ DASHBOARD
+// ════════════════════════════════════════════════════
+const Dashboard = ({ meetings, tasks, onTaskClick }) => {
+  const p1cnt = tasks.filter(t => t.priority === 'P1').length;
+  const p2cnt = tasks.filter(t => t.priority === 'P2').length;
+  const overdueCnt = tasks.filter(t => isOverdue(t.dueDate)).length;
+  const { now, week } = thisWeekRange();
+  const weekCnt = tasks.filter(t => {
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate + 'T00:00:00');
+    return d >= now && d <= week;
+  }).length;
 
-// ── Task Modal ────────────────────────────────────────────────────
-const TaskModal=({task,onSave,onClose,isHistory})=>{
-  const[form,setForm]=useState({...blankTask(),...task});
-  const[err,setErr]=useState("");
-  const[saving,setSaving]=useState(false);
-  const set=k=>v=>setForm(f=>({...f,[k]:v}));
-  const save=async()=>{
-    if(!form.title.trim()){setErr("請輸入追蹤事項");return;}
-    setSaving(true);
-    await onSave({...form,id:form.id||genId()});
-    setSaving(false);
-  };
-  return(
-    <Modal title={form.id?(isHistory?"編輯歷史任務":"編輯任務"):"新增任務"} onClose={onClose}>
-      <div style={{marginBottom:14}}>
-        <Lbl c="優先等級"/>
-        <div style={{display:"flex",gap:6}}>
-          {Object.entries(PRIORITY).map(([k,v])=>(
-            <button key={k} onClick={()=>set("priority")(k)}
-              style={{flex:1,padding:"9px 0",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",
-                border:form.priority===k?`2px solid ${v.color}`:"1.5px solid #e5e7eb",
-                background:form.priority===k?v.color:"#fff",
-                color:form.priority===k?"#fff":"#9ca3af",WebkitAppearance:"none"}}>{k}</button>
-          ))}
-        </div>
-      </div>
-      <div style={{marginBottom:14}}><Lbl c="追蹤事項 *"/>
-        <Inp value={form.title} onChange={set("title")} placeholder="工作內容..."/>
-        {err&&<div style={{color:"#ef4444",fontSize:12,marginTop:4}}>{err}</div>}
-      </div>
-      <div style={{marginBottom:14}}><Lbl c="負責人"/>
-        <Inp value={form.owner} onChange={set("owner")} placeholder="負責人姓名..."/>
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <div style={{flex:1}}><Lbl c="預定完成日"/><Inp type="date" value={form.plannedDate} onChange={set("plannedDate")}/></div>
-        <div style={{flex:1}}><Lbl c="實際完成日"/><Inp type="date" value={form.actualDate} onChange={set("actualDate")}/></div>
-      </div>
-      <div style={{marginBottom:14}}><Lbl c="處理過程履歷"/>
-        <Txta value={form.processHistory} onChange={set("processHistory")} placeholder="記錄處理過程（可換行）..." rows={4}/>
-      </div>
-      <div style={{marginBottom:14}}><Lbl c="結案心得"/>
-        <Txta value={form.closingNotes} onChange={set("closingNotes")} placeholder="結案後的心得與改善方向..."/>
-      </div>
-      <div style={{marginBottom:18,padding:"12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
-        <Lbl c="立案日期（可自由選擇）"/>
-        <Inp type="date" value={form.caseDate} onChange={set("caseDate")}/>
-        <div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>💡 可選過去日期，方便補登歷史任務</div>
-      </div>
-      <div style={{display:"flex",gap:8}}>
-        <Btn onClick={onClose} outline color="#6b7280" style={{flex:1}}>取消</Btn>
-        <Btn onClick={save} style={{flex:2,fontSize:15,opacity:saving?.7:1}}>{saving?"儲存中...":"存檔"}</Btn>
-      </div>
-    </Modal>
-  );
-};
-
-const ConfirmModal=({msg,onConfirm,onClose})=>(
-  <Modal title="確認刪除" onClose={onClose}>
-    <div style={{color:"#374151",fontSize:15,marginBottom:20,lineHeight:1.6}}>{msg}</div>
-    <div style={{display:"flex",gap:8}}>
-      <Btn onClick={onClose} outline color="#6b7280" style={{flex:1}}>取消</Btn>
-      <Btn onClick={onConfirm} color="#ef4444" style={{flex:1}}>確認刪除</Btn>
-    </div>
-  </Modal>
-);
-
-const MeetingModal=({meeting,onSave,onClose})=>{
-  const[form,setForm]=useState({title:meeting.title||"",startTime:meeting.startTime||"",endTime:meeting.endTime||"",id:meeting.id||null});
-  const set=k=>v=>setForm(f=>({...f,[k]:v}));
-  return(
-    <Modal title={form.id?"編輯會議":"新增會議"} onClose={onClose}>
-      <div style={{marginBottom:14}}><Lbl c="會議主題 *"/>
-        <Inp value={form.title} onChange={set("title")} placeholder="會議名稱..."/>
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:20}}>
-        <div style={{flex:1}}><Lbl c="開始時間"/><Inp type="time" value={form.startTime} onChange={set("startTime")}/></div>
-        <div style={{flex:1}}><Lbl c="結束時間"/><Inp type="time" value={form.endTime} onChange={set("endTime")}/></div>
-      </div>
-      <div style={{display:"flex",gap:8}}>
-        <Btn onClick={onClose} outline color="#6b7280" style={{flex:1}}>取消</Btn>
-        <Btn onClick={()=>{if(!form.title.trim())return;onSave({...form,id:form.id||genId()});}} style={{flex:2}}>儲存</Btn>
-      </div>
-    </Modal>
-  );
-};
-
-// ── Header ────────────────────────────────────────────────────────
-const Header=({title,sub,right})=>(
-  <div style={{background:"#fff",padding:"18px 16px 13px",
-    borderBottom:"1px solid #f3f4f6",
-    display:"flex",justifyContent:"space-between",alignItems:"flex-end",
-    position:"sticky",top:0,zIndex:10}}>
+  return (
     <div>
-      <div style={{fontSize:22,fontWeight:800,color:"#111827"}}>{title}</div>
-      {sub&&<div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{sub}</div>}
-    </div>
-    {right}
-  </div>
-);
-
-// ── Today Tab ─────────────────────────────────────────────────────
-const TodayTab=({meetings,onAdd,onEdit,onDelete})=>(
-  <div>
-    <Header title="今日會議" sub={`${todayDisplay()} · ${meetings.length} 場`}
-      right={<Btn onClick={onAdd} style={{padding:"7px 13px",fontSize:13}}>＋ 新增</Btn>}/>
-    <div style={{padding:"12px 14px"}}>
-      {meetings.length===0
-        ?<div style={{background:"#fff",borderRadius:16,padding:"44px 16px",textAlign:"center",color:"#d1d5db"}}>
-           <div style={{fontSize:40,marginBottom:10}}>📅</div>
-           <div style={{fontSize:14}}>今日尚無會議</div>
-         </div>
-        :meetings.map(m=>(
-          <div key={m.id} style={{background:"#fff",borderRadius:14,padding:"14px",marginBottom:9,
-            display:"flex",justifyContent:"space-between",alignItems:"center",
-            boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
-            <div>
-              {m.startTime&&<span style={{background:"#eff6ff",color:"#3b82f6",fontSize:11,
-                fontWeight:700,padding:"3px 9px",borderRadius:6,display:"inline-block",marginBottom:5}}>
-                {m.startTime}{m.endTime?`－${m.endTime}`:""}</span>}
-              <div style={{fontWeight:600,fontSize:15,color:"#111827"}}>{m.title}</div>
-              {m.source==="google"&&<span style={{fontSize:10,color:"#ca8a04",background:"#fef9c3",
-                padding:"1px 6px",borderRadius:4,marginTop:3,display:"inline-block"}}>Google 日曆</span>}
-            </div>
-            <div style={{display:"flex",gap:5}}>
-              {m.source!=="google"&&<IBtn onClick={()=>onEdit(m)} emoji="✏️"/>}
-              <IBtn onClick={()=>onDelete(m.id)} emoji="🗑️" bg="#fee2e2" title="刪除"/>
-            </div>
-          </div>
-        ))
-      }
-    </div>
-  </div>
-);
-
-// ── Task Card ─────────────────────────────────────────────────────
-const TaskCard=({task,onEdit,onComplete,onDelete})=>{
-  const p=PRIORITY[task.priority]||PRIORITY.P3;
-  const ov=isOverdue(task.plannedDate);
-  return(
-    <div style={{background:"#fff",borderRadius:14,padding:"13px",marginBottom:9,
-      boxShadow:"0 1px 4px rgba(0,0,0,0.07)",borderLeft:`4px solid ${p.color}`}}>
-      <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:600,fontSize:15,color:"#111827",lineHeight:1.3}}>{task.title}</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:5}}>
-            <span style={{fontSize:11,fontWeight:700,color:p.color,background:p.light,
-              padding:"2px 7px",borderRadius:5}}>{p.label}</span>
-            {task.owner&&<span style={{fontSize:11,color:"#6b7280",background:"#f3f4f6",
-              padding:"2px 7px",borderRadius:5}}>👤 {task.owner}</span>}
-            {task.plannedDate&&<span style={{fontSize:11,color:ov?"#ef4444":"#9ca3af",fontWeight:ov?700:400}}>
-              {ov?"⚠️ ":"📅 "}{isoToDisplay(task.plannedDate)}</span>}
-          </div>
-          {task.closingNotes&&<div style={{fontSize:12,color:"#6b7280",marginTop:6,
-            background:"#f9fafb",borderRadius:6,padding:"5px 8px",lineHeight:1.5}}>
-            💬 {task.closingNotes}</div>}
+      <div className="date-bar">
+        <div>
+          <span className="date-main">{todayDisplay()}</span>
+          <span className="date-wd">{todayWD()}</span>
         </div>
-        <div style={{display:"flex",gap:4,flexShrink:0,flexDirection:"column"}}>
-          {onComplete&&<IBtn onClick={()=>onComplete(task.id)} emoji="✓" bg="#dcfce7" title="標記完成"/>}
-          <IBtn onClick={()=>onEdit(task)} emoji="✏️" title="編輯"/>
-          <IBtn onClick={()=>onDelete(task.id)} emoji="🗑️" bg="#fee2e2" title="刪除"/>
+        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.8</span></span>
+      </div>
+      <div className="stat-row">
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--orange)'}}>{p2cnt}</div><div className="stat-lbl">P2 重要</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{overdueCnt}</div><div className="stat-lbl">逾期</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:'var(--gray)'}}>{weekCnt}</div><div className="stat-lbl">本週到期</div></div>
+      </div>
+
+      <div style={{background:'var(--green-bg)'}}>
+        <div className="sec-hdr">
+          <div className="sec-hdr-left">
+            <div className="sec-dot" style={{background:'var(--green)'}}></div>
+            <span className="sec-title" style={{color:'var(--green)'}}>今日會議</span>
+          </div>
+          <span className="sec-count">{meetings.length} 場</span>
         </div>
       </div>
+      {meetings.map((m, i) => {
+        const over = isMeetingOver(m);
+        const st = (m.startUTC ? utcToLocalTime(m.startUTC) : m.startTime) || m.startTime;
+        const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
+        return (
+          <div key={i} style={{
+            background: over ? '#f8f8f8' : '#fff',
+            padding:'10px 16px', borderBottom:'0.5px solid #f2f2f2',
+            display:'flex', alignItems:'center', gap:9,
+          }}>
+            <div style={{
+              width:8, height:8, borderRadius:'50%', flexShrink:0,
+              background: over ? '#ddd' : '#1D9E75',
+            }}/>
+            <span style={{
+              fontSize:12, width:74, flexShrink:0, whiteSpace:'nowrap',
+              color: over ? '#ccc' : '#555', fontWeight: over ? 400 : 500,
+              textDecoration: over ? 'line-through' : 'none',
+            }}>{st}{et?'–'+et:''}</span>
+            <span style={{
+              flex:1, fontSize:14,
+              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+              color: over ? '#bbb' : '#1a1a1a',
+              fontWeight: over ? 400 : 600,
+              textDecoration: over ? 'line-through' : 'none',
+            }}>{m.title}</span>
+          </div>
+        );
+      })}
+      {meetings.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>今日無會議</div>}
+
+      <div style={{background:'var(--blue-bg)',marginTop:4}}>
+        <div className="sec-hdr">
+          <div className="sec-hdr-left">
+            <div className="sec-dot" style={{background:'var(--blue)'}}></div>
+            <span className="sec-title" style={{color:'var(--blue)'}}>工作任務</span>
+          </div>
+          <span className="sec-count">{tasks.length} 項</span>
+        </div>
+      </div>
+      {tasks.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
+      {tasks.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>無進行中任務</div>}
     </div>
   );
 };
 
-// ── Tasks Tab ─────────────────────────────────────────────────────
-const TasksTab=({tasks,onAdd,onEdit,onComplete,onDelete,onExport})=>{
-  const sorted=[...tasks].sort((a,b)=>{
-    const o={P1:0,P2:1,P3:2,P4:3};
-    const d=(o[a.priority]??2)-(o[b.priority]??2);
-    return d||((a.plannedDate||"z").localeCompare(b.plannedDate||"z"));
-  });
-  const groups=Object.keys(PRIORITY).map(k=>({key:k,...PRIORITY[k],
-    items:sorted.filter(t=>t.priority===k)})).filter(g=>g.items.length);
-  return(
+// ════════════════════════════════════════════════════
+// ⑥ MEETINGS PAGE
+// ════════════════════════════════════════════════════
+const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
+  const [expanded, setExpanded] = useState(null);
+  // 每分鐘更新一次，讓時間判斷即時反映
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
     <div>
-      <Header title="Tasks" sub={`${tasks.length} 項待辦`}
-        right={<Btn onClick={onAdd} style={{padding:"7px 13px",fontSize:13}}>＋ 新增</Btn>}/>
-      <div style={{padding:"12px 14px"}}>
-        {tasks.length===0
-          ?<div style={{background:"#fff",borderRadius:16,padding:"48px 16px",textAlign:"center",color:"#d1d5db"}}>
-             <div style={{fontSize:40,marginBottom:10}}>🎉</div>
-             <div style={{fontSize:14}}>目前無待辦事項</div>
-           </div>
-          :groups.map(g=>(
-            <div key={g.key} style={{marginBottom:16}}>
-              <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
-                <span style={{width:10,height:10,borderRadius:"50%",background:g.color,display:"inline-block"}}/>
-                <span style={{fontSize:12,fontWeight:700,color:g.color}}>{g.label}</span>
-                <span style={{fontSize:11,color:"#9ca3af"}}>（{g.items.length}）</span>
+      <div className="date-bar">
+        <div>
+          <span className="date-main">{todayDisplay()}</span>
+          <span className="date-wd">{todayWD()}</span>
+        </div>
+        <span className="date-right" onClick={onRefresh} style={{cursor:'pointer',color:'var(--blue)'}}>⟳ 重新同步</span>
+      </div>
+      {loading && <div className="spinner">同步中...</div>}
+      {!loading && meetings.length === 0 && <div className="empty">今日無會議安排</div>}
+      {meetings.map((m, i) => {
+        const over = isMeetingOver(m);
+        const st = (m.startUTC ? utcToLocalTime(m.startUTC) : m.startTime) || m.startTime;
+        const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
+        return (
+          <div key={i}>
+            <div
+              onClick={() => setExpanded(expanded===i?null:i)}
+              style={{
+                background: over ? '#f8f8f8' : '#fff',
+                padding:'12px 16px', borderBottom:'0.5px solid #f2f2f2',
+                display:'flex', alignItems:'center', gap:10, cursor:'pointer',
+                WebkitTapHighlightColor:'transparent',
+              }}
+            >
+              {/* 狀態圓點 */}
+              <div style={{
+                width:22, height:22, borderRadius:'50%', flexShrink:0,
+                background: over ? '#ddd' : '#1D9E75',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                {over
+                  ? <span style={{color:'#fff',fontSize:13,lineHeight:1}}>✓</span>
+                  : <span style={{width:7,height:7,borderRadius:'50%',background:'#fff',display:'block'}}/>
+                }
               </div>
-              {g.items.map(t=><TaskCard key={t.id} task={t} onEdit={onEdit} onComplete={onComplete} onDelete={onDelete}/>)}
+              {/* 時間 */}
+              <span style={{
+                fontSize:12, width:78, flexShrink:0, whiteSpace:'nowrap',
+                color: over ? '#ccc' : '#555', fontWeight: over ? 400 : 500,
+                textDecoration: over ? 'line-through' : 'none',
+              }}>{st}{et?'–'+et:''}</span>
+              {/* 標題 */}
+              <span style={{
+                flex:1, fontSize:14,
+                whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                color: over ? '#bbb' : '#1a1a1a',
+                fontWeight: over ? 400 : 600,
+                textDecoration: over ? 'line-through' : 'none',
+              }}>{m.title}</span>
+              <span style={{fontSize:18,color:'#ccc',flexShrink:0,padding:'0 4px'}}>
+                {expanded===i?'∨':'›'}
+              </span>
             </div>
-          ))
-        }
-        {tasks.length>0&&(
-          <button onClick={onExport} style={{width:"100%",marginTop:4,padding:"11px",borderRadius:12,
-            border:"1.5px dashed #9ca3af",background:"#f9fafb",color:"#6b7280",
-            fontSize:12,fontWeight:600,cursor:"pointer"}}>
-            📥 匯出 CSV 備份
+            {expanded === i && (
+              <div style={{background:'#f9f9f9',padding:'10px 16px 10px 52px',borderBottom:'0.5px solid #f2f2f2',fontSize:13,color:'#666',lineHeight:1.7}}>
+                {m.location ? <div>📍 {m.location}</div> : <div style={{color:'#bbb'}}>無詳細資訊</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑦ TASK FORM PAGE (新增 / 編輯)
+// ════════════════════════════════════════════════════
+const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
+  const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr() };
+  const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
+    setSaving(true);
+    try { await onSave(form); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="form-wrap">
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">{mode === 'add' ? '新增任務' : '編輯任務'}</span>
+        <span></span>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">優先等級</span>
+          <select value={form.priority} onChange={e => set('priority', e.target.value)}>
+            <option value="P1">P1 極急</option>
+            <option value="P2">P2 重要</option>
+            <option value="P3">P3 一般</option>
+            <option value="P4">P4 備忘</option>
+          </select>
+        </div>
+        <div className="form-row">
+          <span className="f-label">追蹤事項</span>
+          <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">負責人</span>
+          <select value={form.owner} onChange={e => set('owner', e.target.value)}>
+            <option value="">— 選擇 —</option>
+            {members.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="form-row">
+          <span className="f-label">預定完成日</span>
+          <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+        </div>
+        <div className="form-row">
+          <span className="f-label">實際完成日</span>
+          <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>處理過程履歷</label>
+          <textarea
+            placeholder="記錄處理過程（可換行輸入）..."
+            value={form.progress}
+            rows={5}
+            onChange={e => set('progress', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>結案心得</label>
+          <textarea
+            placeholder="結案後的心得與改善方向..."
+            value={form.reflection}
+            rows={3}
+            onChange={e => set('reflection', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">立案日期</span>
+          <input type="date" value={form.createdDate || todayStr()} onChange={e => set('createdDate', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? '儲存中...' : '存檔'}
+        </button>
+        <button className="btn btn-secondary" onClick={onBack}>取消</button>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑧ TASK DETAIL PAGE
+// ════════════════════════════════════════════════════
+const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed, onDelete, isHistory = false }) => {
+  const [editMode, setEditMode] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [current, setCurrent] = useState(task);
+  const overdue = isOverdue(current.dueDate);
+
+  const handleSave = async (data) => {
+    // 確保完整欄位都傳給 GAS，避免部分欄位（如結案心得）被清空
+    const fullData = { ...current, ...data };
+    await api.updateTask(current.id, fullData);
+    setCurrent(fullData);
+    onSaved(current.id, fullData);
+    setEditMode(false);
+  };
+
+  const handleClose = async () => {
+    if (!window.confirm('確定要結案此任務嗎？')) return;
+    setClosing(true);
+    try {
+      const closeDate = current.completionDate || todayStr();
+      await api.closeTask(current.id, { ...current, completionDate: closeDate });
+      onClosed(current.id, { ...current, completionDate: closeDate });
+    } catch(e) {
+      setClosing(false);
+      const msg = e.name === 'AbortError'
+        ? '⚠ 連線逾時（15秒），請確認 Apps Script 已部署且網址正確'
+        : '⚠ 結案失敗：' + e.message;
+      alert(msg);
+    }
+  };
+
+  if (editMode) return (
+    <TaskFormPage
+      initial={current}
+      members={members}
+      onBack={() => setEditMode(false)}
+      onSave={handleSave}
+      mode="edit"
+    />
+  );
+
+  return (
+    <div className="detail-wrap">
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <div style={{flex:1,display:'flex',alignItems:'center',gap:8,overflow:'hidden'}}>
+          <PBadge level={current.priority} />
+          <span style={{fontSize:15,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {current.title}
+          </span>
+        </div>
+        <span className="hdr-action" onClick={() => setEditMode(true)}>編輯</span>
+      </div>
+
+      <div className="detail-block">
+        <div className="detail-meta">
+          <div className="detail-field">
+            <div className="df-label">優先等級</div>
+            <div className={`df-value ${pInfo(current.priority).text}`}>{current.priority} {pInfo(current.priority).label}</div>
+          </div>
+          <div className="detail-field">
+            <div className="df-label">負責人</div>
+            <div className="df-value">{current.owner || '—'}</div>
+          </div>
+          <div className="detail-field">
+            <div className="df-label">預定完成日</div>
+            <div className="df-value" style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{color: overdue ? 'var(--red)' : 'inherit'}}>{fmtFull(current.dueDate)}</span>
+              {overdue && <span className="overdue-pill">逾期</span>}
+            </div>
+          </div>
+          {current.completionDate && (
+            <div className="detail-field">
+              <div className="df-label">實際完成日</div>
+              <div className="df-value">{fmtFull(current.completionDate)}</div>
+            </div>
+          )}
+          <div className="detail-field">
+            <div className="df-label">立案日期</div>
+            <div className="df-value">{fmtFull(current.createdDate)}</div>
+          </div>
+        </div>
+      </div>
+
+      {current.progress ? (
+        <div className="detail-block">
+          <div className="detail-text">
+            <div className="dt-label">處理過程履歷</div>
+            <div className="dt-value">{current.progress}</div>
+          </div>
+        </div>
+      ) : null}
+
+      {current.reflection ? (
+        <div className="detail-block">
+          <div className="detail-text">
+            <div className="dt-label">結案心得</div>
+            <div className="dt-value">{current.reflection}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="btn-row">
+        {!isHistory && (
+          <button className="btn btn-close" onClick={handleClose} disabled={closing}>
+            {closing ? '結案中...' : '✓ 結案'}
           </button>
         )}
+        <button className="btn btn-edit" onClick={() => setEditMode(true)}>編輯</button>
+        <button className="btn btn-secondary" onClick={onBack}>返回</button>
       </div>
+      {onDelete && (
+        <div style={{padding:'0 16px 20px'}}>
+          <button
+            className="btn"
+            style={{width:'100%',background:'#fff',border:'1px solid #E24B4A',color:'#E24B4A'}}
+            onClick={() => onDelete(current.id)}
+          >🗑 刪除此{isHistory ? '歷史紀錄' : '任務'}</button>
+        </div>
+      )}
     </div>
   );
 };
 
-// ── History Tab ───────────────────────────────────────────────────
-const HistoryTab=({history,onAdd,onEdit,onDelete,onExport})=>(
+// ════════════════════════════════════════════════════
+// ⑨ TASKS PAGE
+// ════════════════════════════════════════════════════
+const TasksPage = ({ tasks, onTaskClick }) => (
   <div>
-    <Header title="歷史紀錄" sub={`已完成 ${history.length} 項`}
-      right={<Btn onClick={onAdd} style={{padding:"7px 13px",fontSize:13}}>＋ 補登</Btn>}/>
-    <div style={{padding:"12px 14px"}}>
-      {history.length===0
-        ?<div style={{background:"#fff",borderRadius:16,padding:"48px 16px",textAlign:"center",color:"#d1d5db"}}>
-           <div style={{fontSize:40,marginBottom:10}}>📋</div>
-           <div style={{fontSize:14}}>尚無完成紀錄</div>
-         </div>
-        :history.map(t=>{
-          const p=PRIORITY[t.priority]||PRIORITY.P3;
-          return(
-            <div key={t.id} style={{background:"#fff",borderRadius:14,padding:"13px",marginBottom:9,
-              boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,fontSize:15,color:"#374151",
-                    textDecoration:"line-through",opacity:.7}}>{t.title}</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:5}}>
-                    <span style={{fontSize:11,fontWeight:700,color:p.color,background:p.light,
-                      padding:"2px 7px",borderRadius:5}}>{p.label}</span>
-                    {t.owner&&<span style={{fontSize:11,color:"#9ca3af"}}>👤 {t.owner}</span>}
-                    {t.caseDate&&<span style={{fontSize:11,color:"#9ca3af"}}>📁 {isoToDisplay(t.caseDate)}</span>}
-                    {(t.actualDate||t.completedAt)&&<span style={{fontSize:11,color:"#16a34a"}}>
-                      ✅ {isoToDisplay(t.actualDate)||(t.completedAt?new Date(t.completedAt).toLocaleDateString("zh-TW"):"")}</span>}
-                  </div>
-                  {t.closingNotes&&<div style={{fontSize:12,color:"#6b7280",marginTop:6,
-                    background:"#f0fdf4",borderRadius:6,padding:"5px 8px",lineHeight:1.5}}>
-                    💬 {t.closingNotes}</div>}
-                </div>
-                <div style={{display:"flex",gap:4,flexDirection:"column"}}>
-                  <IBtn onClick={()=>onEdit(t)} emoji="✏️" title="編輯"/>
-                  <IBtn onClick={()=>onDelete(t.id)} emoji="🗑️" bg="#fee2e2" title="刪除"/>
-                </div>
-              </div>
-            </div>
-          );
-        })
-      }
-      {history.length>0&&(
-        <button onClick={onExport} style={{width:"100%",marginTop:4,padding:"11px",borderRadius:12,
-          border:"1.5px dashed #9ca3af",background:"#f9fafb",color:"#6b7280",
-          fontSize:12,fontWeight:600,cursor:"pointer"}}>
-          📥 匯出 CSV 備份
-        </button>
-      )}
-    </div>
+    {tasks.length === 0 && <div className="empty">無進行中任務 🎉</div>}
+    {tasks.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
   </div>
 );
 
-// ── Dashboard Tab ─────────────────────────────────────────────────
-const DashboardTab=({meetings,tasks,gasUrl,onOpenSettings})=>{
-  const p1=tasks.filter(t=>t.priority==="P1").length;
-  const p2=tasks.filter(t=>t.priority==="P2").length;
-  const ov=tasks.filter(t=>isOverdue(t.plannedDate)).length;
-  const hi=tasks.filter(t=>t.priority==="P1"||t.priority==="P2")
-    .sort((a,b)=>a.priority>b.priority?1:-1);
-  return(
+// ════════════════════════════════════════════════════
+// ⑩ HISTORY PAGE
+// ════════════════════════════════════════════════════
+const HistoryPage = ({ history, onItemClick }) => {
+  const [query, setQuery] = useState('');
+
+  const filtered = history.filter(t => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (t.title || '').toLowerCase().includes(q) || (t.owner || '').toLowerCase().includes(q);
+  });
+
+  const grouped = {};
+  filtered.forEach(t => {
+    const d = t.completionDate ? new Date(t.completionDate + 'T00:00:00') : null;
+    const key = d && !isNaN(d) ? `${d.getFullYear()} 年 ${d.getMonth()+1} 月` : '未知';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(t);
+  });
+
+  return (
     <div>
-      <Header title="戰情中心" sub={todayDisplay()}/>
-
-      {/* Sheets 狀態 */}
-      <div onClick={onOpenSettings} style={{margin:"12px 14px 0",padding:"11px 14px",
-        background:gasUrl?"#f0fdf4":"#fffbeb",borderRadius:12,cursor:"pointer",
-        border:`1.5px solid ${gasUrl?"#86efac":"#fde68a"}`,
-        display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{fontSize:13,color:gasUrl?"#16a34a":"#92400e",fontWeight:600}}>
-          {gasUrl?"✅ 已連接 Google Sheets":"⚠️ 尚未設定 Google Sheets 同步"}
-        </div>
-        <span style={{fontSize:12,color:"#6b7280"}}>⚙️ 設定</span>
+      <div className="h-search">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/>
+          <line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input placeholder="搜尋關鍵字 / 負責人..." value={query} onChange={e => setQuery(e.target.value)} />
+        {query && <span onClick={() => setQuery('')} style={{cursor:'pointer',color:'#bbb',fontSize:20,lineHeight:1}}>×</span>}
       </div>
-
-      {/* 數字統計 */}
-      <div style={{display:"flex",gap:8,padding:"10px 14px 0"}}>
-        {[
-          {label:"今日會議",val:meetings.length,color:"#3b82f6",icon:"📅"},
-          {label:"P1 極急", val:p1,            color:"#ef4444",icon:"🚨"},
-          {label:"P2 重要", val:p2,            color:"#f97316",icon:"⚡"},
-          {label:"逾期",    val:ov,            color:ov>0?"#ef4444":"#9ca3af",icon:"⏰"},
-        ].map(s=>(
-          <div key={s.label} style={{flex:1,background:"#fff",borderRadius:14,padding:"12px 4px",
-            textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
-            <div style={{fontSize:20}}>{s.icon}</div>
-            <div style={{fontSize:22,fontWeight:800,color:s.color,lineHeight:1.2}}>{s.val}</div>
-            <div style={{fontSize:10,color:"#9ca3af",fontWeight:600,marginTop:2}}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* 今日會議 */}
-      <div style={{margin:"12px 14px 0"}}>
-        <div style={{fontWeight:700,fontSize:14,color:"#111827",marginBottom:8}}>📅 今日會議</div>
-        <div style={{background:"#fff",borderRadius:14,overflow:"hidden",
-          boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-          {meetings.length===0
-            ?<div style={{padding:"16px",textAlign:"center",color:"#9ca3af",fontSize:13}}>今日無會議</div>
-            :meetings.map((m,i)=>(
-              <div key={m.id} style={{padding:"11px 15px",
-                borderBottom:i<meetings.length-1?"1px solid #f3f4f6":"none",
-                display:"flex",alignItems:"center",gap:10}}>
-                {m.startTime&&<span style={{fontSize:12,color:"#3b82f6",fontWeight:700,
-                  minWidth:95,flexShrink:0}}>{m.startTime}{m.endTime?`－${m.endTime}`:""}</span>}
-                <span style={{fontSize:14,color:"#111827"}}>{m.title}</span>
+      {filtered.length === 0 && <div className="empty">查無結果</div>}
+      {Object.entries(grouped).map(([month, items]) => (
+        <div key={month}>
+          <div className="h-month">{month}</div>
+          {items.map((t, i) => (
+            <div key={i} className="h-row" onClick={() => onItemClick(t)}>
+              <div className="h-top">
+                <PBadge level={t.priority} />
+                <span className="h-title">{t.title}</span>
+                <span className="h-date">{fmtShort(t.completionDate)}</span>
               </div>
-            ))
-          }
-        </div>
-      </div>
-
-      {/* P1/P2 重點 */}
-      {hi.length>0&&(
-        <div style={{margin:"12px 14px 0"}}>
-          <div style={{fontWeight:700,fontSize:14,color:"#111827",marginBottom:8}}>🚨 近期重點追蹤</div>
-          {hi.map(t=>{const p=PRIORITY[t.priority];return(
-            <div key={t.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",
-              marginBottom:7,borderLeft:`4px solid ${p.color}`,
-              boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-              <div style={{fontWeight:600,fontSize:14,color:"#111827"}}>{t.title}</div>
-              <div style={{fontSize:11,marginTop:4,display:"flex",gap:10,flexWrap:"wrap"}}>
-                <span style={{color:p.color,fontWeight:700}}>{p.label}</span>
-                {t.owner&&<span style={{color:"#9ca3af"}}>👤 {t.owner}</span>}
-                {t.plannedDate&&<span style={{color:isOverdue(t.plannedDate)?"#ef4444":"#9ca3af"}}>
-                  {isOverdue(t.plannedDate)?"⚠️ ":"📅 "}{isoToDisplay(t.plannedDate)}</span>}
-              </div>
+              <div className="h-meta">負責人：{t.owner || '—'}</div>
             </div>
-          );})}
+          ))}
         </div>
-      )}
-      <div style={{height:16}}/>
+      ))}
     </div>
   );
 };
 
-// ── Main App ──────────────────────────────────────────────────────
-function App(){
-  const[tab,setTab]=useState("today");
-  const[meetings,setMeetings]=useState([]);
-  const[tasks,setTasks]=useState([]);
-  const[history,setHistory]=useState([]);
-  const[gasUrl,setGasUrl]=useState("");
-  const[loaded,setLoaded]=useState(false);
+// ════════════════════════════════════════════════════
+// ⑪ SETUP SCREEN
+// ════════════════════════════════════════════════════
+const SetupScreen = ({ onSave }) => {
+  const [url, setUrl] = useState('');
+  return (
+    <div className="setup-wrap">
+      <div style={{textAlign:'center',marginBottom:8}}>
+        <svg width="64" height="64" viewBox="0 0 72 72">
+          <rect x="8" y="8" width="26" height="26" rx="5" fill="#FCEBEB"/>
+          <text x="21" y="28" textAnchor="middle" fill="#A32D2D" fontSize="13" fontWeight="700" fontFamily="sans-serif">P1</text>
+          <rect x="38" y="8" width="26" height="26" rx="5" fill="#FAEEDA"/>
+          <text x="51" y="28" textAnchor="middle" fill="#854F0B" fontSize="13" fontWeight="700" fontFamily="sans-serif">P2</text>
+          <rect x="8" y="38" width="26" height="26" rx="5" fill="#f0f0f0"/>
+          <text x="21" y="58" textAnchor="middle" fill="#555" fontSize="13" fontWeight="700" fontFamily="sans-serif">P3</text>
+          <rect x="38" y="38" width="26" height="26" rx="5" fill="#EAF3DE"/>
+          <text x="51" y="58" textAnchor="middle" fill="#27500A" fontSize="13" fontWeight="700" fontFamily="sans-serif">P4</text>
+        </svg>
+      </div>
+      <div className="setup-title">工作追蹤設定</div>
+      <div className="setup-desc">
+        請先部署 Google Apps Script，取得網址後貼入下方：
+      </div>
+      <input
+        className="setup-input"
+        type="url"
+        placeholder="https://script.google.com/macros/s/.../exec"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+      />
+      <button
+        className="btn btn-primary"
+        onClick={() => { if(url.trim()) onSave(url.trim()); }}
+        style={{width:'100%',padding:13,borderRadius:10,fontSize:15}}
+      >
+        儲存並開始使用
+      </button>
+      <div style={{fontSize:12,color:'#bbb',lineHeight:1.7,textAlign:'center'}}>
+        詳見隨附的 apps-script.gs 說明
+      </div>
+    </div>
+  );
+};
 
-  const[taskModal,setTaskModal]=useState(null);
-  const[taskIsHistory,setTaskIsHistory]=useState(false);
-  const[meetModal,setMeetModal]=useState(null);
-  const[confirmDel,setConfirmDel]=useState(null);
-  const[settingsOpen,setSettingsOpen]=useState(false);
+// ════════════════════════════════════════════════════
+// ⑫ MAIN APP
+// ════════════════════════════════════════════════════
+const TAB_ICONS = {
+  dashboard: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.85"/>
+      <rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+    </svg>
+  ),
+  meetings: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <rect x="6" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <rect x="12" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <line x1="2" y1="9" x2="18" y2="9" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+    </svg>
+  ),
+  tasks: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="7" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="7" y1="12" x2="10.5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+    </svg>
+  ),
+  history: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <polyline points="10,6 10,10 13,12" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.6"/>
+    </svg>
+  ),
+};
 
-  const[pushing,setPushing]=useState(false);
-  const[pulling,setPulling]=useState(false);
-  const[syncLog,setSyncLog]=useState([]);
-  const[toast,setToast]=useState({msg:"",type:""});
+const App = () => {
+  const [gasUrl, setGasUrl] = useState(GAS_URL);
+  const [tab, setTab] = useState('dashboard');
+  const [meetings, setMeetings] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [meetLoading, setMeetLoading] = useState(false);
+  const [view, setView] = useState('list'); // 'list' | 'add' | 'detail' | 'historyDetail'
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [toast, setToast] = useState('');
 
-  const showToast=(msg,type="ok")=>{
-    setToast({msg,type});
-    setTimeout(()=>setToast({msg:"",type:""}),3000);
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 4000); };
+
+  const saveGasUrl = url => {
+    localStorage.setItem('gas_url', url);
+    GAS_URL = url;
+    setGasUrl(url);
   };
 
-  // 載入
-  useEffect(()=>{
-    const m=lsGet("wt-meetings"),t=lsGet("wt-tasks"),h=lsGet("wt-history"),g=lsGet("wt-gasurl");
-    if(m)setMeetings(m);if(t)setTasks(t);if(h)setHistory(h);if(g)setGasUrl(g);
-    setLoaded(true);
-  },[]);
+  useEffect(() => { if (gasUrl) loadAll(); }, [gasUrl]);
 
-  const saveMeetings=useCallback(d=>{setMeetings(d);lsSet("wt-meetings",d);},[]);
-  const saveTasks=useCallback(d=>{setTasks(d);lsSet("wt-tasks",d);},[]);
-  const saveHistory=useCallback(d=>{setHistory(d);lsSet("wt-history",d);},[]);
-  const saveGasUrl=useCallback(u=>{setGasUrl(u);lsSet("wt-gasurl",u);},[]);
-
-  const addLog=msg=>setSyncLog(l=>[`${new Date().toLocaleTimeString("zh-TW")} ${msg}`,...l].slice(0,30));
-
-  // Google Sheets 推送
-  const pushToSheets=async(url)=>{
-    const u=url||gasUrl;
-    if(!u){addLog("❌ 請先設定 GAS 網址");return;}
-    setPushing(true);addLog("⏳ 推送至 Google Sheets...");
-    try{
-      const payload=encodeURIComponent(JSON.stringify({tasks,history,meetings}));
-      const r=await fetch(`${u}?action=push&data=${payload}`,{redirect:"follow"});
-      if(!r.ok)throw new Error(`HTTP ${r.status}`);
-      const json=await r.json();
-      if(json.success){
-        addLog(`✅ 推送成功：Tasks ${tasks.length}筆、歷史 ${history.length}筆`);
-        showToast("✅ 推送至 Sheets 成功");
-      }else throw new Error(json.error||"未知錯誤");
-    }catch(e){addLog(`❌ 推送失敗：${e.message}`);showToast("❌ 推送失敗","err");}
-    setPushing(false);
-  };
-
-  // Google Sheets 拉取
-  const pullFromSheets=async(url)=>{
-    const u=url||gasUrl;
-    if(!u){addLog("❌ 請先設定 GAS 網址");return;}
-    setPulling(true);addLog("⏳ 從 Google Sheets 拉取...");
-    try{
-      const r=await fetch(u,{redirect:"follow"});
-      if(!r.ok)throw new Error(`HTTP ${r.status}`);
-      const json=await r.json();
-      if(json.error)throw new Error(json.error);
-      if(json.tasks)saveTasks(json.tasks);
-      if(json.history)saveHistory(json.history);
-      if(json.meetings)saveMeetings(json.meetings);
-      addLog(`✅ 拉取成功：Tasks ${(json.tasks||[]).length}筆、歷史 ${(json.history||[]).length}筆`);
-      showToast("✅ 從 Sheets 拉取成功");
-    }catch(e){addLog(`❌ 拉取失敗：${e.message}`);showToast("❌ 拉取失敗","err");}
-    setPulling(false);
-  };
-
-  // Task CRUD
-  const handleSaveTask=async form=>{
-    if(taskIsHistory){
-      if(form.id&&history.find(h=>h.id===form.id)){
-        saveHistory(history.map(h=>h.id===form.id?{...h,...form}:h));
-      }else{
-        saveHistory([{...form,id:form.id||genId(),completedAt:form.completedAt||new Date().toISOString()},...history]);
-      }
-    }else{
-      if(form.id){saveTasks(tasks.map(t=>t.id===form.id?{...t,...form}:t));}
-      else{saveTasks([...tasks,{...blankTask(),...form,id:genId()}]);}
+  const loadAll = async (isRetry = false) => {
+    // 先顯示快取資料，讓畫面不空白
+    if (!isRetry) {
+      try {
+        const cached = localStorage.getItem('cache_tasks');
+        const cachedMembers = localStorage.getItem('cache_members');
+        const cachedMeetings = localStorage.getItem('cache_meetings_' + todayStr());
+        if (cached) setTasks(JSON.parse(cached));
+        if (cachedMembers) setMembers(JSON.parse(cachedMembers));
+        if (cachedMeetings) setMeetings(JSON.parse(cachedMeetings));
+      } catch(e) {}
     }
-    setTaskModal(null);
-    showToast("✅ 儲存成功");
+    setLoading(true);
+    showToast(isRetry ? '🔄 重試中...' : '⟳ 更新中...');
+    try {
+      const res = await api.get('getAll', { date: todayStr() });
+      // 成功才更新資料，避免失敗時清空畫面
+      const sorted = (res.tasks || []).sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
+      setTasks(sorted);
+      if (res.members && res.members.length > 0) setMembers(res.members);
+      const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
+      const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
+      setMeetings(ms);
+      // 存快取，下次開啟立即顯示
+      try {
+        localStorage.setItem('cache_tasks', JSON.stringify(sorted));
+        if (res.members && res.members.length > 0) localStorage.setItem('cache_members', JSON.stringify(res.members));
+        localStorage.setItem('cache_meetings_' + todayStr(), JSON.stringify(ms));
+      } catch(e) {}
+      showToast('✓ 已同步');
+      // 背景載入歷史紀錄
+      loadHistory();
+    } catch (e) {
+      const isTimeout = e.name === 'AbortError';
+      if (!isRetry) {
+        // 第一次失敗自動重試一次
+        showToast(isTimeout ? '⏳ GAS 預熱中，自動重試...' : '⚠ 載入失敗，重試中...');
+        setLoading(false);
+        setTimeout(() => loadAll(true), 2000);
+        return;
+      }
+      // 重試也失敗：保留舊資料，只顯示提示
+      showToast('⚠ 載入失敗，顯示舊資料');
+    }
+    setLoading(false);
   };
 
-  const handleComplete=id=>{
-    const t=tasks.find(x=>x.id===id);if(!t)return;
-    saveTasks(tasks.filter(x=>x.id!==id));
-    saveHistory([{...t,completedAt:new Date().toISOString()},...history]);
-    showToast("✅ 已移至歷史紀錄");
+  const loadHistory = async () => {
+    try {
+      const h = await api.getHistory();
+      setHistory(h.history || []);
+    } catch(e) { /* 歷史紀錄載入失敗不影響主功能 */ }
   };
 
-  const delTask=id=>setConfirmDel({msg:"確定要刪除這個任務嗎？刪除後無法還原。",
-    onConfirm:()=>{saveTasks(tasks.filter(t=>t.id!==id));setConfirmDel(null);showToast("🗑️ 已刪除","err");}});
-  const delHistory=id=>setConfirmDel({msg:"確定要刪除這筆歷史紀錄嗎？",
-    onConfirm:()=>{saveHistory(history.filter(h=>h.id!==id));setConfirmDel(null);showToast("🗑️ 已刪除","err");}});
-  const delMeeting=id=>setConfirmDel({msg:"確定要刪除這筆會議紀錄嗎？",
-    onConfirm:()=>{saveMeetings(meetings.filter(m=>m.id!==id));setConfirmDel(null);}});
-
-  const handleSaveMeeting=form=>{
-    if(form.id&&meetings.find(m=>m.id===form.id)){saveMeetings(meetings.map(m=>m.id===form.id?form:m));}
-    else{saveMeetings([...meetings,form]);}
-    setMeetModal(null);
+  const loadMeetings = async () => {
+    setMeetLoading(true);
+    showToast('⟳ 同步會議中...');
+    try {
+      const res = await api.getMeetings(todayStr());
+      const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
+      const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
+      setMeetings(ms);
+      showToast('✓ 會議已同步');
+    } catch (e) {
+      showToast('⚠ 同步失敗，保留舊資料');
+      console.warn('Meeting load failed', e);
+    }
+    setMeetLoading(false);
   };
 
-  const sortedMeetings=[...meetings].sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||""));
-  const p1Count=tasks.filter(t=>t.priority==="P1").length;
+  const handleAddTask = async data => {
+    const newTask = { ...data, id: `T${Date.now()}` };
+    try {
+      await api.addTask(newTask);
+      // 新增成功後重新從 Sheets 取得，確保同步
+      setTasks(prev => [...prev, newTask].sort((a,b) => new Date(a.dueDate||'9999')-new Date(b.dueDate||'9999')));
+      setView('list');
+      showToast('✓ 任務已新增');
+      // 背景重新同步確認
+      setTimeout(async () => {
+        try {
+          const res = await api.getTasks();
+          if (res.tasks) {
+            const sorted = res.tasks.sort((a,b) => new Date(a.dueDate||'9999')-new Date(b.dueDate||'9999'));
+            setTasks(sorted);
+          }
+        } catch(e) {}
+      }, 2000);
+    } catch(e) {
+      const msg = e.name === 'AbortError' ? '⚠ 連線逾時，任務可能未儲存' : '⚠ 新增失敗：' + e.message;
+      alert(msg);
+    }
+  };
 
-  if(!loaded)return(
-    <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",
-      flexDirection:"column",gap:14,color:"#9ca3af"}}>
-      <div style={{fontSize:40}}>⚙️</div>
-      <div style={{fontSize:15}}>載入中...</div>
-    </div>
+  const handleSavedTask = (id, data) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+    showToast('✓ 已更新');
+  };
+
+  const handleClosedTask = (id, data) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setHistory(prev => [{ ...data }, ...prev]);
+    setView('list');
+    showToast('✓ 任務已結案');
+  };
+
+  const handleDeleteTask = async (id) => {
+    if (!window.confirm('確定要刪除此任務嗎？此操作無法復原。')) return;
+    try {
+      await api.deleteTask(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setView('list');
+      showToast('✓ 任務已刪除');
+    } catch(e) { alert('⚠ 刪除失敗：' + e.message); }
+  };
+
+  const handleDeleteHistory = async (id) => {
+    if (!window.confirm('確定要刪除此歷史紀錄嗎？')) return;
+    try {
+      await api.deleteHistory(id);
+      setHistory(prev => prev.filter(t => t.id !== id));
+      setView('list');
+      showToast('✓ 已刪除');
+    } catch(e) { alert('⚠ 刪除失敗：' + e.message); }
+  };
+
+  // ── Render overlay views ──
+  if (!gasUrl) return <SetupScreen onSave={saveGasUrl} />;
+
+  if (view === 'add') return (
+    <TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" />
+  );
+  if (view === 'detail' && selectedTask) return (
+    <TaskDetailPage
+      task={selectedTask} members={members}
+      onBack={() => setView('list')}
+      onSaved={handleSavedTask}
+      onClosed={handleClosedTask}
+      onDelete={handleDeleteTask}
+    />
+  );
+  if (view === 'historyDetail' && selectedTask) return (
+    <TaskDetailPage
+      task={selectedTask} members={members}
+      onBack={() => setView('list')}
+      onSaved={() => {}}
+      onClosed={() => {}}
+      onDelete={handleDeleteHistory}
+      isHistory={true}
+    />
   );
 
-  return(
-    <div style={{maxWidth:520,margin:"0 auto",height:"100vh",display:"flex",
-      flexDirection:"column",background:"#f5f5f7",position:"relative"}}>
+  const renderContent = () => {
+    if (loading) return <div className="spinner" style={{flexDirection:"column",gap:12}}><div style={{fontSize:28}}>⟳</div><div>載入中，首次約需 5-10 秒...</div></div>;
+    switch (tab) {
+      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
+      case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading} />;
+      case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
+      case 'history': return <HistoryPage history={history} onItemClick={t => { setSelectedTask(t); setView('historyDetail'); }} />;
+    }
+  };
 
-      <Toast msg={toast.msg} type={toast.type}/>
+  return (
+    <>
+      <div style={{height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <div className="scroll-area">{renderContent()}</div>
 
-      {/* 主內容 */}
-      <div style={{flex:1,overflowY:"auto",paddingBottom:68}}>
-        {tab==="today"&&<TodayTab meetings={sortedMeetings}
-          onAdd={()=>setMeetModal({})} onEdit={m=>setMeetModal(m)} onDelete={delMeeting}/>}
-        {tab==="tasks"&&<TasksTab tasks={tasks}
-          onAdd={()=>{setTaskIsHistory(false);setTaskModal(blankTask());}}
-          onEdit={t=>{setTaskIsHistory(false);setTaskModal(t);}}
-          onComplete={handleComplete} onDelete={delTask}
-          onExport={()=>exportCSV(tasks,history)}/>}
-        {tab==="history"&&<HistoryTab history={history}
-          onAdd={()=>{setTaskIsHistory(true);setTaskModal(blankTask());}}
-          onEdit={t=>{setTaskIsHistory(true);setTaskModal(t);}}
-          onDelete={delHistory} onExport={()=>exportCSV(tasks,history)}/>}
-        {tab==="dashboard"&&<DashboardTab meetings={sortedMeetings} tasks={tasks}
-          gasUrl={gasUrl} onOpenSettings={()=>setSettingsOpen(true)}/>}
+        {tab === 'tasks' && (
+          <div className="fab" onClick={() => setView('add')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+              <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
+            </svg>
+          </div>
+        )}
+
+        <div className="tab-bar">
+          {[
+            { key:'dashboard', label:'戰情中心' },
+            { key:'meetings',  label:'今日會議' },
+            { key:'tasks',     label:'Tasks' },
+            { key:'history',   label:'歷史紀錄' },
+          ].map(({ key, label }) => (
+            <div key={key} className={`tab-item ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+              {TAB_ICONS[key]}
+              <span className="t-label">{label}</span>
+              <div className="t-bar" />
+            </div>
+          ))}
+        </div>
       </div>
-
-      {/* 底部導覽 */}
-      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
-        width:"100%",maxWidth:520,background:"#fff",
-        borderTop:"1px solid #f0f0f0",display:"flex",zIndex:100,
-        paddingBottom:"env(safe-area-inset-bottom,0)"}}>
-        {NAV.map(n=>{const active=tab===n.id;return(
-          <button key={n.id} onClick={()=>setTab(n.id)}
-            style={{flex:1,border:"none",background:"none",cursor:"pointer",
-              padding:"10px 0 12px",display:"flex",flexDirection:"column",
-              alignItems:"center",gap:3,position:"relative",WebkitAppearance:"none"}}>
-            {active&&<span style={{position:"absolute",top:0,left:"50%",
-              transform:"translateX(-50%)",width:26,height:3,
-              background:"#3b82f6",borderRadius:"0 0 3px 3px"}}/>}
-            <span style={{fontSize:20}}>{n.icon}</span>
-            <span style={{fontSize:10,fontWeight:active?700:400,
-              color:active?"#3b82f6":"#9ca3af"}}>{n.label}</span>
-            {n.id==="tasks"&&p1Count>0&&(
-              <span style={{position:"absolute",top:8,right:"calc(50% - 22px)",
-                background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,
-                borderRadius:10,padding:"1px 5px",lineHeight:"14px"}}>{p1Count}</span>
-            )}
-          </button>
-        );})}
-      </div>
-
-      {/* Modals */}
-      {taskModal!==null&&<TaskModal task={taskModal} onSave={handleSaveTask}
-        onClose={()=>setTaskModal(null)} isHistory={taskIsHistory}/>}
-      {meetModal!==null&&<MeetingModal meeting={meetModal} onSave={handleSaveMeeting}
-        onClose={()=>setMeetModal(null)}/>}
-      {confirmDel&&<ConfirmModal msg={confirmDel.msg}
-        onConfirm={confirmDel.onConfirm} onClose={()=>setConfirmDel(null)}/>}
-      {settingsOpen&&<SettingsModal gasUrl={gasUrl} onSave={saveGasUrl}
-        onPush={pushToSheets} onPull={pullFromSheets}
-        pushing={pushing} pulling={pulling} syncLog={syncLog}
-        onClose={()=>setSettingsOpen(false)}/>}
-    </div>
+      {toast && <div className="toast">{toast}</div>}
+    </>
   );
-}
+};
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
