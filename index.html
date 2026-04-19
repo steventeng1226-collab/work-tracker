@@ -478,7 +478,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
           <span className="date-main">{todayDisplay()}</span>
           <span className="date-wd">{todayWD()}</span>
         </div>
-        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.8</span></span>
+        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.9</span></span>
       </div>
       <div className="stat-row">
         <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
@@ -1010,50 +1010,46 @@ const App = () => {
   useEffect(() => { if (gasUrl) loadAll(); }, [gasUrl]);
 
   const loadAll = async (isRetry = false) => {
-    // 先顯示快取資料，讓畫面不空白
+    // ① 立即顯示快取，畫面不空白
     if (!isRetry) {
       try {
-        const cached = localStorage.getItem('cache_tasks');
-        const cachedMembers = localStorage.getItem('cache_members');
-        const cachedMeetings = localStorage.getItem('cache_meetings_' + todayStr());
-        if (cached) setTasks(JSON.parse(cached));
-        if (cachedMembers) setMembers(JSON.parse(cachedMembers));
-        if (cachedMeetings) setMeetings(JSON.parse(cachedMeetings));
+        const ct = localStorage.getItem('cache_tasks');
+        const cm = localStorage.getItem('cache_members');
+        const cmt = localStorage.getItem('cache_meetings_' + todayStr());
+        if (ct) setTasks(JSON.parse(ct));
+        if (cm) setMembers(JSON.parse(cm));
+        if (cmt) setMeetings(JSON.parse(cmt));
       } catch(e) {}
     }
+
+    // ② 優先載入 Tasks（不含 ICS，速度快，約 2-5 秒）
     setLoading(true);
-    showToast(isRetry ? '🔄 重試中...' : '⟳ 更新中...');
     try {
       const res = await api.get('getAll', { date: todayStr() });
-      // 成功才更新資料，避免失敗時清空畫面
-      const sorted = (res.tasks || []).sort((a, b) => new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999'));
+      const sorted = (res.tasks || []).sort((a,b) => new Date(a.dueDate||'9999') - new Date(b.dueDate||'9999'));
       setTasks(sorted);
       if (res.members && res.members.length > 0) setMembers(res.members);
-      const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
-      const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
-      setMeetings(ms);
-      // 存快取，下次開啟立即顯示
       try {
         localStorage.setItem('cache_tasks', JSON.stringify(sorted));
         if (res.members && res.members.length > 0) localStorage.setItem('cache_members', JSON.stringify(res.members));
-        localStorage.setItem('cache_meetings_' + todayStr(), JSON.stringify(ms));
       } catch(e) {}
-      showToast('✓ 已同步');
-      // 背景載入歷史紀錄
-      loadHistory();
-    } catch (e) {
-      const isTimeout = e.name === 'AbortError';
+      showToast('✓ 任務已同步');
+    } catch(e) {
       if (!isRetry) {
-        // 第一次失敗自動重試一次
-        showToast(isTimeout ? '⏳ GAS 預熱中，自動重試...' : '⚠ 載入失敗，重試中...');
+        showToast(e.name==='AbortError' ? '⏳ 連線中，自動重試...' : '⚠ 載入失敗，重試中...');
         setLoading(false);
-        setTimeout(() => loadAll(true), 2000);
+        setTimeout(() => loadAll(true), 3000);
         return;
       }
-      // 重試也失敗：保留舊資料，只顯示提示
-      showToast('⚠ 載入失敗，顯示舊資料');
+      showToast('⚠ 任務載入失敗，顯示快取資料');
     }
     setLoading(false);
+
+    // ③ 背景另外載入會議（ICS，較慢不阻塞任務顯示）
+    loadMeetings();
+
+    // ④ 背景載入歷史紀錄
+    loadHistory();
   };
 
   const loadHistory = async () => {
