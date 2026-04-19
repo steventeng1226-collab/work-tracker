@@ -1,55 +1,64 @@
-import { useState, useEffect, useCallback } from "react";
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="工作追蹤"/>
+<title>工作追蹤系統</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
+  background:#f5f5f7;overscroll-behavior:none}
+input,textarea,button,select{font-family:inherit}
+input[type=date]::-webkit-inner-spin-button,
+input[type=date]::-webkit-calendar-picker-indicator{opacity:1}
+::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useCallback,useRef}=React;
 
-// ── 常數 ─────────────────────────────────────────────────────────────────────
-const PRIORITY = {
-  P1: { label: "P1 極急", color: "#ef4444", light: "#fef2f2" },
-  P2: { label: "P2 重要", color: "#f97316", light: "#fff7ed" },
-  P3: { label: "P3 一般",  color: "#6b7280", light: "#f9fafb" },
-  P4: { label: "P4 備忘",  color: "#22c55e", light: "#f0fdf4" },
+// ── 常數 ──────────────────────────────────────────────────────────
+const PRIORITY={
+  P1:{label:"P1 極急",color:"#ef4444",light:"#fef2f2"},
+  P2:{label:"P2 重要",color:"#f97316",light:"#fff7ed"},
+  P3:{label:"P3 一般", color:"#6b7280",light:"#f9fafb"},
+  P4:{label:"P4 備忘", color:"#22c55e",light:"#f0fdf4"},
 };
-const NAV = [
-  { id:"today",     icon:"📅", label:"今日會議" },
-  { id:"tasks",     icon:"🚩", label:"Tasks" },
-  { id:"history",   icon:"📋", label:"歷史" },
-  { id:"dashboard", icon:"🎯", label:"戰情中心" },
+const NAV=[
+  {id:"today",icon:"📅",label:"今日會議"},
+  {id:"tasks",icon:"🚩",label:"Tasks"},
+  {id:"history",icon:"📋",label:"歷史"},
+  {id:"dashboard",icon:"🎯",label:"戰情中心"},
 ];
 
-// ── 工具函式 ─────────────────────────────────────────────────────────────────
-const genId = () => `${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-const isoToDisplay = iso => { if(!iso)return""; const[y,m,d]=iso.split("-"); return`${y}/${+m}/${+d}`; };
-const todayISO = () => new Date().toISOString().split("T")[0];
-const todayDisplay = () => { const d=new Date(); return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; };
-const isOverdue = iso => !!iso && new Date(iso) < new Date(new Date().toDateString());
+// ── 工具 ──────────────────────────────────────────────────────────
+const genId=()=>`${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+const isoToDisplay=iso=>{if(!iso)return"";const[y,m,d]=iso.split("-");return`${y}/${+m}/${+d}`;};
+const todayISO=()=>new Date().toISOString().split("T")[0];
+const todayDisplay=()=>{const d=new Date();return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;};
+const isOverdue=iso=>!!iso&&new Date(iso)<new Date(new Date().toDateString());
 
-// ── 本地儲存 ─────────────────────────────────────────────────────────────────
-const sGet = async k => { try{ const r=await window.storage.get(k); return r?.value ? JSON.parse(r.value) : null; }catch{ return null; } };
-const sSet = async (k,v) => { try{ await window.storage.set(k,JSON.stringify(v)); }catch(e){ console.error(e); } };
+// ── localStorage ─────────────────────────────────────────────────
+const lsGet=k=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){console.error(e);}};
 
-const blankTask = (o={}) => ({
-  id:null, title:"", priority:"P2", owner:"",
-  plannedDate:"", actualDate:"", processHistory:"",
-  closingNotes:"", caseDate:todayISO(), ...o
+const blankTask=(o={})=>({
+  id:null,title:"",priority:"P2",owner:"",
+  plannedDate:"",actualDate:"",processHistory:"",
+  closingNotes:"",caseDate:todayISO(),...o
 });
 
-// ── Google Sheets 同步 ──────────────────────────────────────────────────────
-const sheetsGet = async (url) => {
-  // GAS web app 的 GET 需要 follow redirect
-  const r = await fetch(url, { redirect:"follow" });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
-};
-
-const sheetsPost = async (url, body) => {
-  // GAS doPost：用 no-cors 避免 CORS 問題，改用 GET 帶 action 參數
-  // 實際做法：將資料 Base64 編碼後用 GET 傳送（避開 CORS preflight）
-  const payload = encodeURIComponent(JSON.stringify(body));
-  const r = await fetch(`${url}?action=push&data=${payload}`, { redirect:"follow" });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
-};
-
-// ── 匯出 CSV ─────────────────────────────────────────────────────────────────
-const exportCSV = (tasks, history) => {
+// ── CSV 匯出 ────────────────────────────────────────────────────
+const exportCSV=(tasks,history)=>{
   const all=[...tasks.map(t=>({...t,_s:"進行中"})),...history.map(t=>({...t,_s:"已完成"}))];
   const cols=["_s","priority","title","owner","plannedDate","actualDate","caseDate","processHistory","closingNotes"];
   const hd=["狀態","優先等級","追蹤事項","負責人","預定完成日","實際完成日","立案日期","處理過程履歷","結案心得"];
@@ -57,135 +66,151 @@ const exportCSV = (tasks, history) => {
     .map(r=>r.join(",")).join("\n");
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob(["\uFEFF"+rows],{type:"text/csv;charset=utf-8;"}));
-  a.download=`工作追蹤_${todayISO()}.csv`; a.click();
+  a.download=`工作追蹤_${todayISO()}.csv`;a.click();
 };
 
-// ── 共用 UI ──────────────────────────────────────────────────────────────────
-const Lbl = ({c}) => <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.07em"}}>{c}</div>;
+// ── 共用 UI ──────────────────────────────────────────────────────
+const Lbl=({c})=><div style={{fontSize:11,fontWeight:700,color:"#9ca3af",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.07em"}}>{c}</div>;
 
-const Inp = ({value,onChange,placeholder,type="text",disabled}) => (
+const Inp=({value,onChange,placeholder,type="text",disabled})=>(
   <input type={type} value={value??""} onChange={e=>onChange(e.target.value)}
     placeholder={placeholder} disabled={disabled}
-    style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"9px 12px",fontSize:14,
-      boxSizing:"border-box",outline:"none",color:"#111827",background:disabled?"#f3f4f6":"#fafafa",
-      fontFamily:"inherit"}}/>
+    style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"10px 12px",fontSize:15,
+      boxSizing:"border-box",outline:"none",color:"#111827",
+      background:disabled?"#f3f4f6":"#fafafa",WebkitAppearance:"none"}}/>
 );
 
-const Txta = ({value,onChange,placeholder,rows=3}) => (
+const Txta=({value,onChange,placeholder,rows=3})=>(
   <textarea value={value??""} onChange={e=>onChange(e.target.value)}
     placeholder={placeholder} rows={rows}
-    style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"9px 12px",fontSize:13,
-      boxSizing:"border-box",resize:"none",outline:"none",fontFamily:"inherit",
+    style={{width:"100%",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"10px 12px",fontSize:14,
+      boxSizing:"border-box",resize:"none",outline:"none",
       color:"#374151",background:"#fafafa",lineHeight:1.6}}/>
 );
 
-const Btn = ({onClick,children,color="#3b82f6",outline,disabled,style={}}) => (
-  <button onClick={onClick} disabled={disabled} style={{border:outline?`1.5px solid ${color}`:"none",
-    borderRadius:10,cursor:disabled?"not-allowed":"pointer",padding:"10px 16px",fontSize:14,fontWeight:600,
-    background:outline?"#fff":color,color:outline?color:"#fff",opacity:disabled?.6:1,...style}}>
+const Btn=({onClick,children,color="#3b82f6",outline,disabled,style={}})=>(
+  <button onClick={onClick} disabled={disabled}
+    style={{border:outline?`1.5px solid ${color}`:"none",borderRadius:10,
+      cursor:disabled?"not-allowed":"pointer",padding:"11px 16px",fontSize:14,fontWeight:600,
+      background:outline?"#fff":color,color:outline?color:"#fff",
+      opacity:disabled?.6:1,WebkitAppearance:"none",...style}}>
     {children}
   </button>
 );
 
-const IBtn = ({onClick,emoji,bg="#f3f4f6",title,size=32}) => (
-  <button onClick={onClick} title={title} style={{border:"none",background:bg,borderRadius:8,
-    width:size,height:size,cursor:"pointer",fontSize:14,
-    display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+const IBtn=({onClick,emoji,bg="#f3f4f6",title,sz=34})=>(
+  <button onClick={onClick} title={title}
+    style={{border:"none",background:bg,borderRadius:8,width:sz,height:sz,
+      cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",
+      justifyContent:"center",flexShrink:0,WebkitAppearance:"none"}}>
     {emoji}
   </button>
 );
 
-// ── Modal 底部彈出 ────────────────────────────────────────────────────────────
-const Modal = ({title,onClose,children}) => (
-  <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",
-    zIndex:400,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:"20px 20px 0 0",
-      width:"100%",maxWidth:480,maxHeight:"92vh",overflowY:"auto",padding:"8px 16px 56px"}}>
-      <div style={{width:36,height:4,background:"#e5e7eb",borderRadius:2,margin:"12px auto 14px"}}/>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+// ── Modal ─────────────────────────────────────────────────────────
+const Modal=({title,onClose,children})=>(
+  <div onClick={onClose}
+    style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",
+      zIndex:400,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div onClick={e=>e.stopPropagation()}
+      style={{background:"#fff",borderRadius:"22px 22px 0 0",
+        width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",
+        padding:"6px 16px 60px"}}>
+      <div style={{width:38,height:5,background:"#e5e7eb",
+        borderRadius:3,margin:"14px auto 16px"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",
+        alignItems:"center",marginBottom:18}}>
         <span style={{fontSize:17,fontWeight:800,color:"#111827"}}>{title}</span>
-        <button onClick={onClose} style={{border:"none",background:"none",fontSize:22,cursor:"pointer",color:"#9ca3af"}}>✕</button>
+        <button onClick={onClose}
+          style={{border:"none",background:"none",fontSize:24,
+            cursor:"pointer",color:"#9ca3af",lineHeight:1,padding:"0 4px"}}>✕</button>
       </div>
       {children}
     </div>
   </div>
 );
 
-// ── 設定 Modal（GAS 網址 + 同步控制）────────────────────────────────────────
-const SettingsModal = ({gasUrl,setGasUrl,onPush,onPull,pushing,pulling,syncLog,onClose}) => {
-  const [url,setUrl] = useState(gasUrl);
-  return (
+// ── Toast ─────────────────────────────────────────────────────────
+const Toast=({msg,type})=>{
+  if(!msg)return null;
+  const bg=type==="ok"?"#16a34a":type==="err"?"#ef4444":"#374151";
+  return(
+    <div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",
+      background:bg,color:"#fff",borderRadius:12,padding:"10px 20px",
+      fontSize:13,fontWeight:600,zIndex:999,
+      boxShadow:"0 4px 20px rgba(0,0,0,0.2)",whiteSpace:"nowrap",
+      maxWidth:"90vw",textAlign:"center"}}>
+      {msg}
+    </div>
+  );
+};
+
+// ── 設定 Modal ────────────────────────────────────────────────────
+const SettingsModal=({gasUrl,onSave,onPush,onPull,pushing,pulling,syncLog,onClose})=>{
+  const[url,setUrl]=useState(gasUrl);
+  return(
     <Modal title="⚙️ 設定 / Google Sheets 同步" onClose={onClose}>
-      <div style={{marginBottom:16}}>
-        <Lbl c="Google Apps Script 網址"/>
+      <div style={{marginBottom:14}}>
+        <Lbl c="Google Apps Script 部署網址"/>
         <Inp value={url} onChange={setUrl} placeholder="https://script.google.com/macros/s/.../exec"/>
-        <div style={{fontSize:11,color:"#9ca3af",marginTop:6,lineHeight:1.6}}>
-          📋 請先安裝 gas-sync.js 至 Google Sheets，部署後貼上網址。
+        <div style={{fontSize:11,color:"#9ca3af",marginTop:6,lineHeight:1.7}}>
+          📋 安裝 gas-sync.js → Apps Script → 部署為網頁應用程式 → 複製網址貼入此處
         </div>
       </div>
-
       <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <Btn onClick={()=>{ setGasUrl(url); onPull(url); }}
-          disabled={!url.trim()||pulling} color="#16a34a"
-          style={{flex:1,fontSize:13}}>
-          {pulling ? "⏳ 拉取中..." : "⬇️ 從 Sheets 拉取"}
+        <Btn onClick={()=>{onSave(url);onPull(url);}}
+          disabled={!url.trim()||pulling} color="#16a34a" style={{flex:1,fontSize:13,padding:"10px 8px"}}>
+          {pulling?"⏳ 拉取中...":"⬇️ 從 Sheets 拉取"}
         </Btn>
-        <Btn onClick={()=>{ setGasUrl(url); onPush(url); }}
-          disabled={!url.trim()||pushing} color="#2563eb"
-          style={{flex:1,fontSize:13}}>
-          {pushing ? "⏳ 推送中..." : "⬆️ 推送至 Sheets"}
+        <Btn onClick={()=>{onSave(url);onPush(url);}}
+          disabled={!url.trim()||pushing} style={{flex:1,fontSize:13,padding:"10px 8px"}}>
+          {pushing?"⏳ 推送中...":"⬆️ 推送至 Sheets"}
         </Btn>
       </div>
-
-      {syncLog.length > 0 && (
-        <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",marginBottom:14,
-          maxHeight:140,overflowY:"auto"}}>
-          {syncLog.map((l,i) => (
-            <div key={i} style={{fontSize:12,color:l.startsWith("✅")?"#16a34a":l.startsWith("❌")?"#ef4444":"#6b7280",
-              marginBottom:3}}>
-              {l}
-            </div>
+      {syncLog.length>0&&(
+        <div style={{background:"#f8fafc",borderRadius:10,padding:"10px 12px",
+          marginBottom:14,maxHeight:130,overflowY:"auto"}}>
+          {syncLog.map((l,i)=>(
+            <div key={i} style={{fontSize:12,marginBottom:3,
+              color:l.includes("✅")?"#16a34a":l.includes("❌")?"#ef4444":"#6b7280"}}>{l}</div>
           ))}
         </div>
       )}
-
-      <div style={{background:"#fffbeb",borderRadius:10,padding:"10px 12px",marginBottom:14}}>
-        <div style={{fontSize:12,color:"#92400e",lineHeight:1.7}}>
-          <b>同步邏輯說明</b><br/>
-          • ⬇️ 拉取：Sheets → APP（以 Sheets 為準，覆蓋本地）<br/>
-          • ⬆️ 推送：APP → Sheets（以 APP 為準，覆蓋試算表）<br/>
-          • 建議：手機改資料後推送；電腦在 Sheets 改完後拉取
+      <div style={{background:"#fffbeb",borderRadius:10,padding:"11px 13px",marginBottom:14}}>
+        <div style={{fontSize:12,color:"#92400e",lineHeight:1.8}}>
+          <b>同步說明</b><br/>
+          ⬇️ 拉取：Sheets → APP（以 Sheets 為準）<br/>
+          ⬆️ 推送：APP → Sheets（以 APP 為準）
         </div>
       </div>
-
       <Btn onClick={onClose} outline color="#6b7280" style={{width:"100%"}}>關閉</Btn>
     </Modal>
   );
 };
 
-// ── 任務 Modal ────────────────────────────────────────────────────────────────
-const TaskModal = ({task,onSave,onClose,isHistory}) => {
-  const [form,setForm] = useState({...blankTask(),...task});
-  const [err,setErr]   = useState("");
-  const [saving,setSaving] = useState(false);
-  const set = k => v => setForm(f=>({...f,[k]:v}));
-  const save = async () => {
-    if(!form.title.trim()){ setErr("請輸入追蹤事項"); return; }
+// ── Task Modal ────────────────────────────────────────────────────
+const TaskModal=({task,onSave,onClose,isHistory})=>{
+  const[form,setForm]=useState({...blankTask(),...task});
+  const[err,setErr]=useState("");
+  const[saving,setSaving]=useState(false);
+  const set=k=>v=>setForm(f=>({...f,[k]:v}));
+  const save=async()=>{
+    if(!form.title.trim()){setErr("請輸入追蹤事項");return;}
     setSaving(true);
-    await onSave({...form, id:form.id||genId()});
+    await onSave({...form,id:form.id||genId()});
     setSaving(false);
   };
-  return (
+  return(
     <Modal title={form.id?(isHistory?"編輯歷史任務":"編輯任務"):"新增任務"} onClose={onClose}>
       <div style={{marginBottom:14}}>
         <Lbl c="優先等級"/>
         <div style={{display:"flex",gap:6}}>
-          {Object.entries(PRIORITY).map(([k,v]) => (
-            <button key={k} onClick={()=>set("priority")(k)} style={{flex:1,padding:"8px 0",borderRadius:10,
-              fontSize:12,fontWeight:700,cursor:"pointer",
-              border:form.priority===k?`2px solid ${v.color}`:"1.5px solid #e5e7eb",
-              background:form.priority===k?v.color:"#fff",
-              color:form.priority===k?"#fff":"#9ca3af"}}>{k}</button>
+          {Object.entries(PRIORITY).map(([k,v])=>(
+            <button key={k} onClick={()=>set("priority")(k)}
+              style={{flex:1,padding:"9px 0",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",
+                border:form.priority===k?`2px solid ${v.color}`:"1.5px solid #e5e7eb",
+                background:form.priority===k?v.color:"#fff",
+                color:form.priority===k?"#fff":"#9ca3af",WebkitAppearance:"none"}}>{k}</button>
           ))}
         </div>
       </div>
@@ -201,7 +226,7 @@ const TaskModal = ({task,onSave,onClose,isHistory}) => {
         <div style={{flex:1}}><Lbl c="實際完成日"/><Inp type="date" value={form.actualDate} onChange={set("actualDate")}/></div>
       </div>
       <div style={{marginBottom:14}}><Lbl c="處理過程履歷"/>
-        <Txta value={form.processHistory} onChange={set("processHistory")} placeholder="記錄處理過程（可換行輸入）..." rows={4}/>
+        <Txta value={form.processHistory} onChange={set("processHistory")} placeholder="記錄處理過程（可換行）..." rows={4}/>
       </div>
       <div style={{marginBottom:14}}><Lbl c="結案心得"/>
         <Txta value={form.closingNotes} onChange={set("closingNotes")} placeholder="結案後的心得與改善方向..."/>
@@ -219,9 +244,9 @@ const TaskModal = ({task,onSave,onClose,isHistory}) => {
   );
 };
 
-const ConfirmModal = ({msg,onConfirm,onClose}) => (
+const ConfirmModal=({msg,onConfirm,onClose})=>(
   <Modal title="確認刪除" onClose={onClose}>
-    <div style={{color:"#374151",fontSize:15,marginBottom:20}}>{msg}</div>
+    <div style={{color:"#374151",fontSize:15,marginBottom:20,lineHeight:1.6}}>{msg}</div>
     <div style={{display:"flex",gap:8}}>
       <Btn onClick={onClose} outline color="#6b7280" style={{flex:1}}>取消</Btn>
       <Btn onClick={onConfirm} color="#ef4444" style={{flex:1}}>確認刪除</Btn>
@@ -229,30 +254,32 @@ const ConfirmModal = ({msg,onConfirm,onClose}) => (
   </Modal>
 );
 
-const MeetingModal = ({meeting,onSave,onClose}) => {
-  const [form,setForm] = useState({title:meeting.title||"",startTime:meeting.startTime||"",endTime:meeting.endTime||"",id:meeting.id||null});
-  const set = k=>v=>setForm(f=>({...f,[k]:v}));
-  return (
+const MeetingModal=({meeting,onSave,onClose})=>{
+  const[form,setForm]=useState({title:meeting.title||"",startTime:meeting.startTime||"",endTime:meeting.endTime||"",id:meeting.id||null});
+  const set=k=>v=>setForm(f=>({...f,[k]:v}));
+  return(
     <Modal title={form.id?"編輯會議":"新增會議"} onClose={onClose}>
       <div style={{marginBottom:14}}><Lbl c="會議主題 *"/>
         <Inp value={form.title} onChange={set("title")} placeholder="會議名稱..."/>
       </div>
-      <div style={{display:"flex",gap:8,marginBottom:18}}>
+      <div style={{display:"flex",gap:8,marginBottom:20}}>
         <div style={{flex:1}}><Lbl c="開始時間"/><Inp type="time" value={form.startTime} onChange={set("startTime")}/></div>
         <div style={{flex:1}}><Lbl c="結束時間"/><Inp type="time" value={form.endTime} onChange={set("endTime")}/></div>
       </div>
       <div style={{display:"flex",gap:8}}>
         <Btn onClick={onClose} outline color="#6b7280" style={{flex:1}}>取消</Btn>
-        <Btn onClick={()=>{ if(!form.title.trim())return; onSave({...form,id:form.id||genId()}); }} style={{flex:2}}>儲存</Btn>
+        <Btn onClick={()=>{if(!form.title.trim())return;onSave({...form,id:form.id||genId()});}} style={{flex:2}}>儲存</Btn>
       </div>
     </Modal>
   );
 };
 
-// ── Page Header ────────────────────────────────────────────────────────────────
-const Header = ({title,sub,right}) => (
-  <div style={{background:"#fff",padding:"18px 16px 12px",borderBottom:"1px solid #f3f4f6",
-    display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+// ── Header ────────────────────────────────────────────────────────
+const Header=({title,sub,right})=>(
+  <div style={{background:"#fff",padding:"18px 16px 13px",
+    borderBottom:"1px solid #f3f4f6",
+    display:"flex",justifyContent:"space-between",alignItems:"flex-end",
+    position:"sticky",top:0,zIndex:10}}>
     <div>
       <div style={{fontSize:22,fontWeight:800,color:"#111827"}}>{title}</div>
       {sub&&<div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{sub}</div>}
@@ -261,35 +288,30 @@ const Header = ({title,sub,right}) => (
   </div>
 );
 
-// ── Today Tab ──────────────────────────────────────────────────────────────────
-const TodayTab = ({meetings,onSync,syncing,syncMsg,onAdd,onEdit,onDelete}) => (
+// ── Today Tab ─────────────────────────────────────────────────────
+const TodayTab=({meetings,onAdd,onEdit,onDelete})=>(
   <div>
     <Header title="今日會議" sub={`${todayDisplay()} · ${meetings.length} 場`}
-      right={<Btn onClick={onAdd} style={{padding:"6px 12px",fontSize:13}}>＋ 新增</Btn>}/>
-    <div style={{padding:"10px 14px 0"}}>
-      <button onClick={onSync} disabled={syncing} style={{width:"100%",padding:"10px",borderRadius:10,
-        border:"1.5px dashed #93c5fd",background:"#eff6ff",color:"#2563eb",fontSize:13,fontWeight:600,
-        cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-        <span>🔄</span>{syncing?"同步中...":"從 Google 日曆同步今日會議"}
-      </button>
-      {syncMsg&&<div style={{textAlign:"center",fontSize:12,marginTop:6,
-        color:syncMsg.startsWith("✅")?"#16a34a":syncMsg.startsWith("❌")?"#ef4444":"#6b7280"}}>{syncMsg}</div>}
-    </div>
-    <div style={{padding:"10px 14px"}}>
+      right={<Btn onClick={onAdd} style={{padding:"7px 13px",fontSize:13}}>＋ 新增</Btn>}/>
+    <div style={{padding:"12px 14px"}}>
       {meetings.length===0
-        ? <div style={{background:"#fff",borderRadius:14,padding:"40px 16px",textAlign:"center",color:"#d1d5db"}}>
-            <div style={{fontSize:36,marginBottom:8}}>📅</div>今日尚無會議
-          </div>
-        : meetings.map(m => (
-          <div key={m.id} style={{background:"#fff",borderRadius:14,padding:"13px",marginBottom:8,
-            display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        ?<div style={{background:"#fff",borderRadius:16,padding:"44px 16px",textAlign:"center",color:"#d1d5db"}}>
+           <div style={{fontSize:40,marginBottom:10}}>📅</div>
+           <div style={{fontSize:14}}>今日尚無會議</div>
+         </div>
+        :meetings.map(m=>(
+          <div key={m.id} style={{background:"#fff",borderRadius:14,padding:"14px",marginBottom:9,
+            display:"flex",justifyContent:"space-between",alignItems:"center",
+            boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
             <div>
-              {m.startTime&&<span style={{background:"#eff6ff",color:"#3b82f6",fontSize:11,fontWeight:700,
-                padding:"2px 8px",borderRadius:6,display:"inline-block",marginBottom:4}}>
+              {m.startTime&&<span style={{background:"#eff6ff",color:"#3b82f6",fontSize:11,
+                fontWeight:700,padding:"3px 9px",borderRadius:6,display:"inline-block",marginBottom:5}}>
                 {m.startTime}{m.endTime?`－${m.endTime}`:""}</span>}
-              <div style={{fontWeight:600,fontSize:14,color:"#111827"}}>{m.title}</div>
+              <div style={{fontWeight:600,fontSize:15,color:"#111827"}}>{m.title}</div>
+              {m.source==="google"&&<span style={{fontSize:10,color:"#ca8a04",background:"#fef9c3",
+                padding:"1px 6px",borderRadius:4,marginTop:3,display:"inline-block"}}>Google 日曆</span>}
             </div>
-            <div style={{display:"flex",gap:4}}>
+            <div style={{display:"flex",gap:5}}>
               {m.source!=="google"&&<IBtn onClick={()=>onEdit(m)} emoji="✏️"/>}
               <IBtn onClick={()=>onDelete(m.id)} emoji="🗑️" bg="#fee2e2" title="刪除"/>
             </div>
@@ -300,27 +322,30 @@ const TodayTab = ({meetings,onSync,syncing,syncMsg,onAdd,onEdit,onDelete}) => (
   </div>
 );
 
-// ── Task Card ──────────────────────────────────────────────────────────────────
-const TaskCard = ({task,onEdit,onComplete,onDelete}) => {
+// ── Task Card ─────────────────────────────────────────────────────
+const TaskCard=({task,onEdit,onComplete,onDelete})=>{
   const p=PRIORITY[task.priority]||PRIORITY.P3;
   const ov=isOverdue(task.plannedDate);
-  return (
-    <div style={{background:"#fff",borderRadius:14,padding:"12px",marginBottom:8,
-      boxShadow:"0 1px 4px rgba(0,0,0,0.06)",borderLeft:`4px solid ${p.color}`}}>
+  return(
+    <div style={{background:"#fff",borderRadius:14,padding:"13px",marginBottom:9,
+      boxShadow:"0 1px 4px rgba(0,0,0,0.07)",borderLeft:`4px solid ${p.color}`}}>
       <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:600,fontSize:14,color:"#111827"}}>{task.title}</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
-            <span style={{fontSize:11,fontWeight:700,color:p.color,background:p.light,padding:"2px 6px",borderRadius:5}}>{p.label}</span>
-            {task.owner&&<span style={{fontSize:11,color:"#6b7280",background:"#f3f4f6",padding:"2px 6px",borderRadius:5}}>👤 {task.owner}</span>}
+          <div style={{fontWeight:600,fontSize:15,color:"#111827",lineHeight:1.3}}>{task.title}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:5}}>
+            <span style={{fontSize:11,fontWeight:700,color:p.color,background:p.light,
+              padding:"2px 7px",borderRadius:5}}>{p.label}</span>
+            {task.owner&&<span style={{fontSize:11,color:"#6b7280",background:"#f3f4f6",
+              padding:"2px 7px",borderRadius:5}}>👤 {task.owner}</span>}
             {task.plannedDate&&<span style={{fontSize:11,color:ov?"#ef4444":"#9ca3af",fontWeight:ov?700:400}}>
               {ov?"⚠️ ":"📅 "}{isoToDisplay(task.plannedDate)}</span>}
           </div>
-          {task.closingNotes&&<div style={{fontSize:12,color:"#6b7280",marginTop:5,
-            background:"#f9fafb",borderRadius:6,padding:"5px 7px"}}>💬 {task.closingNotes}</div>}
+          {task.closingNotes&&<div style={{fontSize:12,color:"#6b7280",marginTop:6,
+            background:"#f9fafb",borderRadius:6,padding:"5px 8px",lineHeight:1.5}}>
+            💬 {task.closingNotes}</div>}
         </div>
-        <div style={{display:"flex",gap:3,flexShrink:0,flexDirection:"column"}}>
-          {onComplete&&<IBtn onClick={()=>onComplete(task.id)} emoji="✓" bg="#dcfce7" title="完成"/>}
+        <div style={{display:"flex",gap:4,flexShrink:0,flexDirection:"column"}}>
+          {onComplete&&<IBtn onClick={()=>onComplete(task.id)} emoji="✓" bg="#dcfce7" title="標記完成"/>}
           <IBtn onClick={()=>onEdit(task)} emoji="✏️" title="編輯"/>
           <IBtn onClick={()=>onDelete(task.id)} emoji="🗑️" bg="#fee2e2" title="刪除"/>
         </div>
@@ -329,27 +354,29 @@ const TaskCard = ({task,onEdit,onComplete,onDelete}) => {
   );
 };
 
-// ── Tasks Tab ──────────────────────────────────────────────────────────────────
-const TasksTab = ({tasks,onAdd,onEdit,onComplete,onDelete,onExport}) => {
+// ── Tasks Tab ─────────────────────────────────────────────────────
+const TasksTab=({tasks,onAdd,onEdit,onComplete,onDelete,onExport})=>{
   const sorted=[...tasks].sort((a,b)=>{
     const o={P1:0,P2:1,P3:2,P4:3};
     const d=(o[a.priority]??2)-(o[b.priority]??2);
     return d||((a.plannedDate||"z").localeCompare(b.plannedDate||"z"));
   });
-  const groups=Object.keys(PRIORITY).map(k=>({key:k,...PRIORITY[k],items:sorted.filter(t=>t.priority===k)})).filter(g=>g.items.length);
-  return (
+  const groups=Object.keys(PRIORITY).map(k=>({key:k,...PRIORITY[k],
+    items:sorted.filter(t=>t.priority===k)})).filter(g=>g.items.length);
+  return(
     <div>
       <Header title="Tasks" sub={`${tasks.length} 項待辦`}
-        right={<Btn onClick={onAdd} style={{padding:"6px 12px",fontSize:13}}>＋ 新增</Btn>}/>
-      <div style={{padding:"10px 14px"}}>
+        right={<Btn onClick={onAdd} style={{padding:"7px 13px",fontSize:13}}>＋ 新增</Btn>}/>
+      <div style={{padding:"12px 14px"}}>
         {tasks.length===0
-          ? <div style={{background:"#fff",borderRadius:14,padding:"48px 16px",textAlign:"center",color:"#d1d5db"}}>
-              <div style={{fontSize:36,marginBottom:8}}>🎉</div>目前無待辦事項
-            </div>
-          : groups.map(g=>(
-            <div key={g.key} style={{marginBottom:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
-                <span style={{width:9,height:9,borderRadius:"50%",background:g.color,display:"inline-block"}}/>
+          ?<div style={{background:"#fff",borderRadius:16,padding:"48px 16px",textAlign:"center",color:"#d1d5db"}}>
+             <div style={{fontSize:40,marginBottom:10}}>🎉</div>
+             <div style={{fontSize:14}}>目前無待辦事項</div>
+           </div>
+          :groups.map(g=>(
+            <div key={g.key} style={{marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
+                <span style={{width:10,height:10,borderRadius:"50%",background:g.color,display:"inline-block"}}/>
                 <span style={{fontSize:12,fontWeight:700,color:g.color}}>{g.label}</span>
                 <span style={{fontSize:11,color:"#9ca3af"}}>（{g.items.length}）</span>
               </div>
@@ -358,8 +385,9 @@ const TasksTab = ({tasks,onAdd,onEdit,onComplete,onDelete,onExport}) => {
           ))
         }
         {tasks.length>0&&(
-          <button onClick={onExport} style={{width:"100%",marginTop:6,padding:"10px",borderRadius:10,
-            border:"1.5px dashed #9ca3af",background:"#f9fafb",color:"#6b7280",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+          <button onClick={onExport} style={{width:"100%",marginTop:4,padding:"11px",borderRadius:12,
+            border:"1.5px dashed #9ca3af",background:"#f9fafb",color:"#6b7280",
+            fontSize:12,fontWeight:600,cursor:"pointer"}}>
             📥 匯出 CSV 備份
           </button>
         )}
@@ -368,34 +396,39 @@ const TasksTab = ({tasks,onAdd,onEdit,onComplete,onDelete,onExport}) => {
   );
 };
 
-// ── History Tab ────────────────────────────────────────────────────────────────
-const HistoryTab = ({history,onAdd,onEdit,onDelete,onExport}) => (
+// ── History Tab ───────────────────────────────────────────────────
+const HistoryTab=({history,onAdd,onEdit,onDelete,onExport})=>(
   <div>
     <Header title="歷史紀錄" sub={`已完成 ${history.length} 項`}
-      right={<Btn onClick={onAdd} style={{padding:"6px 12px",fontSize:13}}>＋ 補登</Btn>}/>
-    <div style={{padding:"10px 14px"}}>
+      right={<Btn onClick={onAdd} style={{padding:"7px 13px",fontSize:13}}>＋ 補登</Btn>}/>
+    <div style={{padding:"12px 14px"}}>
       {history.length===0
-        ? <div style={{background:"#fff",borderRadius:14,padding:"48px 16px",textAlign:"center",color:"#d1d5db"}}>
-            <div style={{fontSize:36,marginBottom:8}}>📋</div>尚無完成紀錄
-          </div>
-        : history.map(t => {
+        ?<div style={{background:"#fff",borderRadius:16,padding:"48px 16px",textAlign:"center",color:"#d1d5db"}}>
+           <div style={{fontSize:40,marginBottom:10}}>📋</div>
+           <div style={{fontSize:14}}>尚無完成紀錄</div>
+         </div>
+        :history.map(t=>{
           const p=PRIORITY[t.priority]||PRIORITY.P3;
-          return (
-            <div key={t.id} style={{background:"#fff",borderRadius:14,padding:"12px 13px",marginBottom:8,boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
+          return(
+            <div key={t.id} style={{background:"#fff",borderRadius:14,padding:"13px",marginBottom:9,
+              boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,fontSize:14,color:"#374151",textDecoration:"line-through",opacity:.75}}>{t.title}</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:4}}>
-                    <span style={{fontSize:11,fontWeight:700,color:p.color,background:p.light,padding:"2px 6px",borderRadius:5}}>{p.label}</span>
+                  <div style={{fontWeight:600,fontSize:15,color:"#374151",
+                    textDecoration:"line-through",opacity:.7}}>{t.title}</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:5}}>
+                    <span style={{fontSize:11,fontWeight:700,color:p.color,background:p.light,
+                      padding:"2px 7px",borderRadius:5}}>{p.label}</span>
                     {t.owner&&<span style={{fontSize:11,color:"#9ca3af"}}>👤 {t.owner}</span>}
                     {t.caseDate&&<span style={{fontSize:11,color:"#9ca3af"}}>📁 {isoToDisplay(t.caseDate)}</span>}
                     {(t.actualDate||t.completedAt)&&<span style={{fontSize:11,color:"#16a34a"}}>
-                      ✅ {isoToDisplay(t.actualDate)||new Date(t.completedAt).toLocaleDateString("zh-TW")}</span>}
+                      ✅ {isoToDisplay(t.actualDate)||(t.completedAt?new Date(t.completedAt).toLocaleDateString("zh-TW"):"")}</span>}
                   </div>
-                  {t.closingNotes&&<div style={{fontSize:12,color:"#6b7280",marginTop:5,background:"#f0fdf4",borderRadius:6,padding:"5px 7px"}}>
+                  {t.closingNotes&&<div style={{fontSize:12,color:"#6b7280",marginTop:6,
+                    background:"#f0fdf4",borderRadius:6,padding:"5px 8px",lineHeight:1.5}}>
                     💬 {t.closingNotes}</div>}
                 </div>
-                <div style={{display:"flex",gap:3,flexDirection:"column"}}>
+                <div style={{display:"flex",gap:4,flexDirection:"column"}}>
                   <IBtn onClick={()=>onEdit(t)} emoji="✏️" title="編輯"/>
                   <IBtn onClick={()=>onDelete(t.id)} emoji="🗑️" bg="#fee2e2" title="刪除"/>
                 </div>
@@ -405,8 +438,9 @@ const HistoryTab = ({history,onAdd,onEdit,onDelete,onExport}) => (
         })
       }
       {history.length>0&&(
-        <button onClick={onExport} style={{width:"100%",marginTop:6,padding:"10px",borderRadius:10,
-          border:"1.5px dashed #9ca3af",background:"#f9fafb",color:"#6b7280",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+        <button onClick={onExport} style={{width:"100%",marginTop:4,padding:"11px",borderRadius:12,
+          border:"1.5px dashed #9ca3af",background:"#f9fafb",color:"#6b7280",
+          fontSize:12,fontWeight:600,cursor:"pointer"}}>
           📥 匯出 CSV 備份
         </button>
       )}
@@ -414,21 +448,22 @@ const HistoryTab = ({history,onAdd,onEdit,onDelete,onExport}) => (
   </div>
 );
 
-// ── Dashboard Tab ──────────────────────────────────────────────────────────────
-const DashboardTab = ({meetings,tasks,gasUrl,onSync,syncing,onOpenSettings}) => {
+// ── Dashboard Tab ─────────────────────────────────────────────────
+const DashboardTab=({meetings,tasks,gasUrl,onOpenSettings})=>{
   const p1=tasks.filter(t=>t.priority==="P1").length;
   const p2=tasks.filter(t=>t.priority==="P2").length;
   const ov=tasks.filter(t=>isOverdue(t.plannedDate)).length;
-  const hi=tasks.filter(t=>t.priority==="P1"||t.priority==="P2").sort((a,b)=>a.priority>b.priority?1:-1);
-  return (
+  const hi=tasks.filter(t=>t.priority==="P1"||t.priority==="P2")
+    .sort((a,b)=>a.priority>b.priority?1:-1);
+  return(
     <div>
       <Header title="戰情中心" sub={todayDisplay()}/>
 
-      {/* Sheets 狀態列 */}
-      <div onClick={onOpenSettings} style={{margin:"10px 14px 0",padding:"10px 13px",
-        background: gasUrl?"#f0fdf4":"#fffbeb",borderRadius:12,
+      {/* Sheets 狀態 */}
+      <div onClick={onOpenSettings} style={{margin:"12px 14px 0",padding:"11px 14px",
+        background:gasUrl?"#f0fdf4":"#fffbeb",borderRadius:12,cursor:"pointer",
         border:`1.5px solid ${gasUrl?"#86efac":"#fde68a"}`,
-        display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+        display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{fontSize:13,color:gasUrl?"#16a34a":"#92400e",fontWeight:600}}>
           {gasUrl?"✅ 已連接 Google Sheets":"⚠️ 尚未設定 Google Sheets 同步"}
         </div>
@@ -443,48 +478,45 @@ const DashboardTab = ({meetings,tasks,gasUrl,onSync,syncing,onOpenSettings}) => 
           {label:"P2 重要", val:p2,            color:"#f97316",icon:"⚡"},
           {label:"逾期",    val:ov,            color:ov>0?"#ef4444":"#9ca3af",icon:"⏰"},
         ].map(s=>(
-          <div key={s.label} style={{flex:1,background:"#fff",borderRadius:14,padding:"11px 4px",
-            textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-            <div style={{fontSize:18}}>{s.icon}</div>
-            <div style={{fontSize:20,fontWeight:800,color:s.color,lineHeight:1.2}}>{s.val}</div>
-            <div style={{fontSize:10,color:"#9ca3af",fontWeight:600,marginTop:1}}>{s.label}</div>
+          <div key={s.label} style={{flex:1,background:"#fff",borderRadius:14,padding:"12px 4px",
+            textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
+            <div style={{fontSize:20}}>{s.icon}</div>
+            <div style={{fontSize:22,fontWeight:800,color:s.color,lineHeight:1.2}}>{s.val}</div>
+            <div style={{fontSize:10,color:"#9ca3af",fontWeight:600,marginTop:2}}>{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* 今日會議 */}
       <div style={{margin:"12px 14px 0"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
-          <span style={{fontWeight:700,fontSize:14,color:"#111827"}}>📅 今日會議</span>
-          <button onClick={onSync} disabled={syncing} style={{border:"none",background:"none",
-            color:"#3b82f6",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-            {syncing?"同步中...":"🔄 同步日曆"}
-          </button>
-        </div>
-        <div style={{background:"#fff",borderRadius:14,overflow:"hidden"}}>
+        <div style={{fontWeight:700,fontSize:14,color:"#111827",marginBottom:8}}>📅 今日會議</div>
+        <div style={{background:"#fff",borderRadius:14,overflow:"hidden",
+          boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
           {meetings.length===0
-            ? <div style={{padding:"14px",textAlign:"center",color:"#9ca3af",fontSize:13}}>今日無會議</div>
-            : meetings.map((m,i)=>(
-              <div key={m.id} style={{padding:"10px 14px",
+            ?<div style={{padding:"16px",textAlign:"center",color:"#9ca3af",fontSize:13}}>今日無會議</div>
+            :meetings.map((m,i)=>(
+              <div key={m.id} style={{padding:"11px 15px",
                 borderBottom:i<meetings.length-1?"1px solid #f3f4f6":"none",
-                display:"flex",alignItems:"center",gap:8}}>
-                {m.startTime&&<span style={{fontSize:12,color:"#3b82f6",fontWeight:700,minWidth:90}}>
-                  {m.startTime}{m.endTime?`－${m.endTime}`:""}</span>}
-                <span style={{fontSize:13,color:"#111827"}}>{m.title}</span>
+                display:"flex",alignItems:"center",gap:10}}>
+                {m.startTime&&<span style={{fontSize:12,color:"#3b82f6",fontWeight:700,
+                  minWidth:95,flexShrink:0}}>{m.startTime}{m.endTime?`－${m.endTime}`:""}</span>}
+                <span style={{fontSize:14,color:"#111827"}}>{m.title}</span>
               </div>
             ))
           }
         </div>
       </div>
 
-      {/* P1/P2 */}
+      {/* P1/P2 重點 */}
       {hi.length>0&&(
         <div style={{margin:"12px 14px 0"}}>
-          <div style={{fontWeight:700,fontSize:14,color:"#111827",marginBottom:7}}>🚨 近期重點追蹤</div>
-          {hi.map(t=>{const p=PRIORITY[t.priority]; return(
-            <div key={t.id} style={{background:"#fff",borderRadius:14,padding:"11px 13px",marginBottom:6,borderLeft:`4px solid ${p.color}`}}>
-              <div style={{fontWeight:600,fontSize:13,color:"#111827"}}>{t.title}</div>
-              <div style={{fontSize:11,marginTop:3,display:"flex",gap:8}}>
+          <div style={{fontWeight:700,fontSize:14,color:"#111827",marginBottom:8}}>🚨 近期重點追蹤</div>
+          {hi.map(t=>{const p=PRIORITY[t.priority];return(
+            <div key={t.id} style={{background:"#fff",borderRadius:14,padding:"12px 14px",
+              marginBottom:7,borderLeft:`4px solid ${p.color}`,
+              boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+              <div style={{fontWeight:600,fontSize:14,color:"#111827"}}>{t.title}</div>
+              <div style={{fontSize:11,marginTop:4,display:"flex",gap:10,flexWrap:"wrap"}}>
                 <span style={{color:p.color,fontWeight:700}}>{p.label}</span>
                 {t.owner&&<span style={{color:"#9ca3af"}}>👤 {t.owner}</span>}
                 {t.plannedDate&&<span style={{color:isOverdue(t.plannedDate)?"#ef4444":"#9ca3af"}}>
@@ -494,214 +526,178 @@ const DashboardTab = ({meetings,tasks,gasUrl,onSync,syncing,onOpenSettings}) => 
           );})}
         </div>
       )}
-      <div style={{height:14}}/>
+      <div style={{height:16}}/>
     </div>
   );
 };
 
-// ── 主程式 ────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [tab,setTab]             = useState("today");
-  const [meetings,setMeetings]   = useState([]);
-  const [tasks,setTasks]         = useState([]);
-  const [history,setHistory]     = useState([]);
-  const [gasUrl,setGasUrl]       = useState("");
-  const [loaded,setLoaded]       = useState(false);
+// ── Main App ──────────────────────────────────────────────────────
+function App(){
+  const[tab,setTab]=useState("today");
+  const[meetings,setMeetings]=useState([]);
+  const[tasks,setTasks]=useState([]);
+  const[history,setHistory]=useState([]);
+  const[gasUrl,setGasUrl]=useState("");
+  const[loaded,setLoaded]=useState(false);
 
-  const [taskModal,setTaskModal]         = useState(null);
-  const [taskIsHistory,setTaskIsHistory] = useState(false);
-  const [meetModal,setMeetModal]         = useState(null);
-  const [confirmDel,setConfirmDel]       = useState(null);
-  const [settingsOpen,setSettingsOpen]   = useState(false);
+  const[taskModal,setTaskModal]=useState(null);
+  const[taskIsHistory,setTaskIsHistory]=useState(false);
+  const[meetModal,setMeetModal]=useState(null);
+  const[confirmDel,setConfirmDel]=useState(null);
+  const[settingsOpen,setSettingsOpen]=useState(false);
 
-  const [calSyncing,setCalSyncing]   = useState(false);
-  const [calSyncMsg,setCalSyncMsg]   = useState("");
-  const [pushing,setPushing]         = useState(false);
-  const [pulling,setPulling]         = useState(false);
-  const [syncLog,setSyncLog]         = useState([]);
+  const[pushing,setPushing]=useState(false);
+  const[pulling,setPulling]=useState(false);
+  const[syncLog,setSyncLog]=useState([]);
+  const[toast,setToast]=useState({msg:"",type:""});
 
-  // ── 載入本地資料 ──────────────────────────────────────────────────────────
+  const showToast=(msg,type="ok")=>{
+    setToast({msg,type});
+    setTimeout(()=>setToast({msg:"",type:""}),3000);
+  };
+
+  // 載入
   useEffect(()=>{
-    (async()=>{
-      const[m,t,h,g]=await Promise.all([
-        sGet("wt3-meetings"), sGet("wt3-tasks"),
-        sGet("wt3-history"),  sGet("wt3-gasurl"),
-      ]);
-      if(m) setMeetings(m);
-      if(t) setTasks(t);
-      if(h) setHistory(h);
-      if(g) setGasUrl(g);
-      setLoaded(true);
-    })();
+    const m=lsGet("wt-meetings"),t=lsGet("wt-tasks"),h=lsGet("wt-history"),g=lsGet("wt-gasurl");
+    if(m)setMeetings(m);if(t)setTasks(t);if(h)setHistory(h);if(g)setGasUrl(g);
+    setLoaded(true);
   },[]);
 
-  // ── 儲存工具 ──────────────────────────────────────────────────────────────
-  const saveMeetings = useCallback(async d=>{ setMeetings(d); await sSet("wt3-meetings",d); },[]);
-  const saveTasks    = useCallback(async d=>{ setTasks(d);    await sSet("wt3-tasks",d); },[]);
-  const saveHistory  = useCallback(async d=>{ setHistory(d);  await sSet("wt3-history",d); },[]);
-  const saveGasUrl   = useCallback(async u=>{ setGasUrl(u);   await sSet("wt3-gasurl",u); },[]);
+  const saveMeetings=useCallback(d=>{setMeetings(d);lsSet("wt-meetings",d);},[]);
+  const saveTasks=useCallback(d=>{setTasks(d);lsSet("wt-tasks",d);},[]);
+  const saveHistory=useCallback(d=>{setHistory(d);lsSet("wt-history",d);},[]);
+  const saveGasUrl=useCallback(u=>{setGasUrl(u);lsSet("wt-gasurl",u);},[]);
 
-  const addLog = msg => setSyncLog(l=>[`${new Date().toLocaleTimeString("zh-TW")} ${msg}`,...l].slice(0,30));
+  const addLog=msg=>setSyncLog(l=>[`${new Date().toLocaleTimeString("zh-TW")} ${msg}`,...l].slice(0,30));
 
-  // ── 推送至 Google Sheets ──────────────────────────────────────────────────
-  const pushToSheets = async (url) => {
-    const u = url || gasUrl;
-    if(!u){ addLog("❌ 請先設定 GAS 網址"); return; }
-    setPushing(true);
-    addLog("⏳ 推送資料至 Google Sheets...");
-    try {
-      // 用 GET + data 參數（避開 CORS preflight）
-      const payload = JSON.stringify({ tasks, history, meetings });
-      const encoded = encodeURIComponent(payload);
-      const r = await fetch(`${u}?action=push&data=${encoded}`, { redirect:"follow" });
-      if(!r.ok) throw new Error(`HTTP ${r.status}`);
-      const json = await r.json();
-      if(json.success) {
-        addLog(`✅ 推送成功：Tasks ${tasks.length}筆、歷史 ${history.length}筆、會議 ${meetings.length}筆`);
-      } else {
-        addLog(`❌ Sheets 回傳錯誤：${json.error||"未知"}`);
-      }
-    } catch(e) {
-      addLog(`❌ 推送失敗：${e.message}`);
-    }
+  // Google Sheets 推送
+  const pushToSheets=async(url)=>{
+    const u=url||gasUrl;
+    if(!u){addLog("❌ 請先設定 GAS 網址");return;}
+    setPushing(true);addLog("⏳ 推送至 Google Sheets...");
+    try{
+      const payload=encodeURIComponent(JSON.stringify({tasks,history,meetings}));
+      const r=await fetch(`${u}?action=push&data=${payload}`,{redirect:"follow"});
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const json=await r.json();
+      if(json.success){
+        addLog(`✅ 推送成功：Tasks ${tasks.length}筆、歷史 ${history.length}筆`);
+        showToast("✅ 推送至 Sheets 成功");
+      }else throw new Error(json.error||"未知錯誤");
+    }catch(e){addLog(`❌ 推送失敗：${e.message}`);showToast("❌ 推送失敗","err");}
     setPushing(false);
-    await saveGasUrl(u);
   };
 
-  // ── 從 Google Sheets 拉取 ─────────────────────────────────────────────────
-  const pullFromSheets = async (url) => {
-    const u = url || gasUrl;
-    if(!u){ addLog("❌ 請先設定 GAS 網址"); return; }
-    setPulling(true);
-    addLog("⏳ 從 Google Sheets 拉取資料...");
-    try {
-      const r = await fetch(u, { redirect:"follow" });
-      if(!r.ok) throw new Error(`HTTP ${r.status}`);
-      const json = await r.json();
-      if(json.error) throw new Error(json.error);
-      if(json.tasks)    await saveTasks(json.tasks);
-      if(json.history)  await saveHistory(json.history);
-      if(json.meetings) await saveMeetings(json.meetings);
+  // Google Sheets 拉取
+  const pullFromSheets=async(url)=>{
+    const u=url||gasUrl;
+    if(!u){addLog("❌ 請先設定 GAS 網址");return;}
+    setPulling(true);addLog("⏳ 從 Google Sheets 拉取...");
+    try{
+      const r=await fetch(u,{redirect:"follow"});
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const json=await r.json();
+      if(json.error)throw new Error(json.error);
+      if(json.tasks)saveTasks(json.tasks);
+      if(json.history)saveHistory(json.history);
+      if(json.meetings)saveMeetings(json.meetings);
       addLog(`✅ 拉取成功：Tasks ${(json.tasks||[]).length}筆、歷史 ${(json.history||[]).length}筆`);
-    } catch(e) {
-      addLog(`❌ 拉取失敗：${e.message}`);
-    }
+      showToast("✅ 從 Sheets 拉取成功");
+    }catch(e){addLog(`❌ 拉取失敗：${e.message}`);showToast("❌ 拉取失敗","err");}
     setPulling(false);
-    await saveGasUrl(u);
   };
 
-  // ── Google 日曆同步 ───────────────────────────────────────────────────────
-  const syncCalendar = async () => {
-    setCalSyncing(true); setCalSyncMsg("正在連接 Google 日曆...");
-    try {
-      const today=new Date().toISOString().split("T")[0];
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
-          mcp_servers:[{type:"url",url:"https://calendarmcp.googleapis.com/mcp/v1",name:"google-calendar"}],
-          messages:[{role:"user",content:`List all calendar events for today ${today}. Reply ONLY with a JSON array. Format: [{"title":"...","startTime":"HH:MM","endTime":"HH:MM"}]`}]
-        })
-      });
-      const data=await res.json();
-      const text=(data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
-      const match=text.match(/\[[\s\S]*?\]/);
-      if(match){
-        const events=JSON.parse(match[0]);
-        const cal=events.map(e=>({id:genId(),title:e.title||"（無標題）",startTime:e.startTime||"",endTime:e.endTime||"",source:"google"}));
-        const manual=meetings.filter(m=>m.source!=="google");
-        await saveMeetings([...cal,...manual].sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||"")));
-        setCalSyncMsg(`✅ 同步 ${cal.length} 場會議`);
-      } else {
-        setCalSyncMsg("⚠️ 今日無會議或授權已過期");
-      }
-    } catch {
-      setCalSyncMsg("❌ 同步失敗，請確認已授權 Google 日曆");
-    }
-    setCalSyncing(false);
-    setTimeout(()=>setCalSyncMsg(""),5000);
-  };
-
-  // ── Task CRUD ─────────────────────────────────────────────────────────────
-  const handleSaveTask = async form => {
+  // Task CRUD
+  const handleSaveTask=async form=>{
     if(taskIsHistory){
-      if(form.id && history.find(h=>h.id===form.id)){
-        await saveHistory(history.map(h=>h.id===form.id?{...h,...form}:h));
-      } else {
-        await saveHistory([{...form,id:form.id||genId(),completedAt:form.completedAt||new Date().toISOString()},...history]);
+      if(form.id&&history.find(h=>h.id===form.id)){
+        saveHistory(history.map(h=>h.id===form.id?{...h,...form}:h));
+      }else{
+        saveHistory([{...form,id:form.id||genId(),completedAt:form.completedAt||new Date().toISOString()},...history]);
       }
-    } else {
-      if(form.id){ await saveTasks(tasks.map(t=>t.id===form.id?{...t,...form}:t)); }
-      else        { await saveTasks([...tasks,{...blankTask(),...form,id:genId()}]); }
+    }else{
+      if(form.id){saveTasks(tasks.map(t=>t.id===form.id?{...t,...form}:t));}
+      else{saveTasks([...tasks,{...blankTask(),...form,id:genId()}]);}
     }
     setTaskModal(null);
+    showToast("✅ 儲存成功");
   };
 
-  const handleComplete = async id => {
-    const t=tasks.find(x=>x.id===id); if(!t)return;
-    await saveTasks(tasks.filter(x=>x.id!==id));
-    await saveHistory([{...t,completedAt:new Date().toISOString()},...history]);
+  const handleComplete=id=>{
+    const t=tasks.find(x=>x.id===id);if(!t)return;
+    saveTasks(tasks.filter(x=>x.id!==id));
+    saveHistory([{...t,completedAt:new Date().toISOString()},...history]);
+    showToast("✅ 已移至歷史紀錄");
   };
 
-  const handleDeleteTask    = id => setConfirmDel({msg:"確定要刪除這個任務嗎？",    onConfirm:async()=>{ await saveTasks(tasks.filter(t=>t.id!==id));    setConfirmDel(null); }});
-  const handleDeleteHistory = id => setConfirmDel({msg:"確定要刪除這筆歷史紀錄嗎？",onConfirm:async()=>{ await saveHistory(history.filter(h=>h.id!==id)); setConfirmDel(null); }});
+  const delTask=id=>setConfirmDel({msg:"確定要刪除這個任務嗎？刪除後無法還原。",
+    onConfirm:()=>{saveTasks(tasks.filter(t=>t.id!==id));setConfirmDel(null);showToast("🗑️ 已刪除","err");}});
+  const delHistory=id=>setConfirmDel({msg:"確定要刪除這筆歷史紀錄嗎？",
+    onConfirm:()=>{saveHistory(history.filter(h=>h.id!==id));setConfirmDel(null);showToast("🗑️ 已刪除","err");}});
+  const delMeeting=id=>setConfirmDel({msg:"確定要刪除這筆會議紀錄嗎？",
+    onConfirm:()=>{saveMeetings(meetings.filter(m=>m.id!==id));setConfirmDel(null);}});
 
-  // ── Meeting CRUD ──────────────────────────────────────────────────────────
-  const handleSaveMeeting = async form => {
-    if(form.id && meetings.find(m=>m.id===form.id)){ await saveMeetings(meetings.map(m=>m.id===form.id?form:m)); }
-    else { await saveMeetings([...meetings,form]); }
+  const handleSaveMeeting=form=>{
+    if(form.id&&meetings.find(m=>m.id===form.id)){saveMeetings(meetings.map(m=>m.id===form.id?form:m));}
+    else{saveMeetings([...meetings,form]);}
     setMeetModal(null);
   };
-  const handleDeleteMeeting = id => setConfirmDel({msg:"確定要刪除這筆會議紀錄嗎？",onConfirm:async()=>{ await saveMeetings(meetings.filter(m=>m.id!==id)); setConfirmDel(null); }});
 
   const sortedMeetings=[...meetings].sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||""));
   const p1Count=tasks.filter(t=>t.priority==="P1").length;
 
-  if(!loaded) return (
+  if(!loaded)return(
     <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",
-      flexDirection:"column",gap:12,color:"#9ca3af",
-      fontFamily:"-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif"}}>
-      <div style={{fontSize:36}}>⚙️</div>
-      <div style={{fontSize:14}}>載入資料中...</div>
+      flexDirection:"column",gap:14,color:"#9ca3af"}}>
+      <div style={{fontSize:40}}>⚙️</div>
+      <div style={{fontSize:15}}>載入中...</div>
     </div>
   );
 
-  return (
-    <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC',sans-serif",
-      maxWidth:480,margin:"0 auto",height:"100vh",display:"flex",flexDirection:"column",background:"#f5f5f7"}}>
+  return(
+    <div style={{maxWidth:520,margin:"0 auto",height:"100vh",display:"flex",
+      flexDirection:"column",background:"#f5f5f7",position:"relative"}}>
+
+      <Toast msg={toast.msg} type={toast.type}/>
 
       {/* 主內容 */}
-      <div style={{flex:1,overflowY:"auto",paddingBottom:70}}>
-        {tab==="today"&&<TodayTab meetings={sortedMeetings} onSync={syncCalendar}
-          syncing={calSyncing} syncMsg={calSyncMsg}
-          onAdd={()=>setMeetModal({})} onEdit={m=>setMeetModal(m)} onDelete={handleDeleteMeeting}/>}
+      <div style={{flex:1,overflowY:"auto",paddingBottom:68}}>
+        {tab==="today"&&<TodayTab meetings={sortedMeetings}
+          onAdd={()=>setMeetModal({})} onEdit={m=>setMeetModal(m)} onDelete={delMeeting}/>}
         {tab==="tasks"&&<TasksTab tasks={tasks}
-          onAdd={()=>{ setTaskIsHistory(false); setTaskModal(blankTask()); }}
-          onEdit={t=>{ setTaskIsHistory(false); setTaskModal(t); }}
-          onComplete={handleComplete} onDelete={handleDeleteTask}
+          onAdd={()=>{setTaskIsHistory(false);setTaskModal(blankTask());}}
+          onEdit={t=>{setTaskIsHistory(false);setTaskModal(t);}}
+          onComplete={handleComplete} onDelete={delTask}
           onExport={()=>exportCSV(tasks,history)}/>}
         {tab==="history"&&<HistoryTab history={history}
-          onAdd={()=>{ setTaskIsHistory(true); setTaskModal(blankTask()); }}
-          onEdit={t=>{ setTaskIsHistory(true); setTaskModal(t); }}
-          onDelete={handleDeleteHistory} onExport={()=>exportCSV(tasks,history)}/>}
+          onAdd={()=>{setTaskIsHistory(true);setTaskModal(blankTask());}}
+          onEdit={t=>{setTaskIsHistory(true);setTaskModal(t);}}
+          onDelete={delHistory} onExport={()=>exportCSV(tasks,history)}/>}
         {tab==="dashboard"&&<DashboardTab meetings={sortedMeetings} tasks={tasks}
-          gasUrl={gasUrl} onSync={syncCalendar} syncing={calSyncing}
-          onOpenSettings={()=>setSettingsOpen(true)}/>}
+          gasUrl={gasUrl} onOpenSettings={()=>setSettingsOpen(true)}/>}
       </div>
 
       {/* 底部導覽 */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,maxWidth:480,margin:"0 auto",
-        background:"#fff",borderTop:"1px solid #f3f4f6",display:"flex",zIndex:200}}>
-        {NAV.map(n=>{ const active=tab===n.id; return(
-          <button key={n.id} onClick={()=>setTab(n.id)} style={{flex:1,border:"none",background:"none",
-            cursor:"pointer",padding:"10px 0 13px",display:"flex",flexDirection:"column",
-            alignItems:"center",gap:2,position:"relative"}}>
-            {active&&<span style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",
-              width:24,height:3,background:"#3b82f6",borderRadius:"0 0 3px 3px"}}/>}
-            <span style={{fontSize:19}}>{n.icon}</span>
-            <span style={{fontSize:10,fontWeight:active?700:400,color:active?"#3b82f6":"#9ca3af"}}>{n.label}</span>
-            {n.id==="tasks"&&p1Count>0&&<span style={{position:"absolute",top:7,right:"calc(50% - 20px)",
-              background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,
-              borderRadius:10,padding:"1px 4px",lineHeight:"14px"}}>{p1Count}</span>}
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
+        width:"100%",maxWidth:520,background:"#fff",
+        borderTop:"1px solid #f0f0f0",display:"flex",zIndex:100,
+        paddingBottom:"env(safe-area-inset-bottom,0)"}}>
+        {NAV.map(n=>{const active=tab===n.id;return(
+          <button key={n.id} onClick={()=>setTab(n.id)}
+            style={{flex:1,border:"none",background:"none",cursor:"pointer",
+              padding:"10px 0 12px",display:"flex",flexDirection:"column",
+              alignItems:"center",gap:3,position:"relative",WebkitAppearance:"none"}}>
+            {active&&<span style={{position:"absolute",top:0,left:"50%",
+              transform:"translateX(-50%)",width:26,height:3,
+              background:"#3b82f6",borderRadius:"0 0 3px 3px"}}/>}
+            <span style={{fontSize:20}}>{n.icon}</span>
+            <span style={{fontSize:10,fontWeight:active?700:400,
+              color:active?"#3b82f6":"#9ca3af"}}>{n.label}</span>
+            {n.id==="tasks"&&p1Count>0&&(
+              <span style={{position:"absolute",top:8,right:"calc(50% - 22px)",
+                background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,
+                borderRadius:10,padding:"1px 5px",lineHeight:"14px"}}>{p1Count}</span>
+            )}
           </button>
         );})}
       </div>
@@ -713,12 +709,15 @@ export default function App() {
         onClose={()=>setMeetModal(null)}/>}
       {confirmDel&&<ConfirmModal msg={confirmDel.msg}
         onConfirm={confirmDel.onConfirm} onClose={()=>setConfirmDel(null)}/>}
-      {settingsOpen&&<SettingsModal
-        gasUrl={gasUrl} setGasUrl={saveGasUrl}
+      {settingsOpen&&<SettingsModal gasUrl={gasUrl} onSave={saveGasUrl}
         onPush={pushToSheets} onPull={pullFromSheets}
-        pushing={pushing} pulling={pulling}
-        syncLog={syncLog}
+        pushing={pushing} pulling={pulling} syncLog={syncLog}
         onClose={()=>setSettingsOpen(false)}/>}
     </div>
   );
 }
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
