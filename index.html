@@ -373,7 +373,7 @@ const pInfo = p => PMAP[p] || PMAP.P3;
 // GET 請求無 preflight 問題，直接使用。
 // ────────────────────────────────────────────────────────
 
-const fetchWithTimeout = (url, options={}, ms=25000) => {
+const fetchWithTimeout = (url, options={}, ms=30000) => {  // 30秒 timeout
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(t));
@@ -478,7 +478,10 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
           <span className="date-main">{todayDisplay()}</span>
           <span className="date-wd">{todayWD()}</span>
         </div>
-        <span className="date-right" style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}><span>⟳ 今日 {meetings.length} 場</span><span style={{fontSize:10,color:"#ccc"}}>v1.9</span></span>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+              <span style={{fontSize:11,color:"var(--text-muted)"}}>今日 {meetings.length} 場</span>
+              <span style={{fontSize:10,color:"#ccc"}}>v1.9</span>
+            </div>
       </div>
       <div className="stat-row">
         <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
@@ -1022,27 +1025,33 @@ const App = () => {
       } catch(e) {}
     }
 
-    // ② 優先載入 Tasks（不含 ICS，速度快，約 2-5 秒）
+    // ② 優先載入 Tasks（不含 ICS）
     setLoading(true);
-    try {
-      const res = await api.get('getAll', { date: todayStr() });
-      const sorted = (res.tasks || []).sort((a,b) => new Date(a.dueDate||'9999') - new Date(b.dueDate||'9999'));
-      setTasks(sorted);
-      if (res.members && res.members.length > 0) setMembers(res.members);
+    let loadOk = false;
+    // 最多重試 3 次
+    const maxTries = isRetry ? 2 : 3;
+    for (let attempt = 1; attempt <= maxTries; attempt++) {
       try {
-        localStorage.setItem('cache_tasks', JSON.stringify(sorted));
-        if (res.members && res.members.length > 0) localStorage.setItem('cache_members', JSON.stringify(res.members));
-      } catch(e) {}
-      showToast('✓ 任務已同步');
-    } catch(e) {
-      if (!isRetry) {
-        showToast(e.name==='AbortError' ? '⏳ 連線中，自動重試...' : '⚠ 載入失敗，重試中...');
-        setLoading(false);
-        setTimeout(() => loadAll(true), 3000);
-        return;
+        showToast(`⟳ 連線中 (${attempt}/${maxTries})...`);
+        const res = await api.get('getAll', { date: todayStr() });
+        const sorted = (res.tasks || []).sort((a,b) => new Date(a.dueDate||'9999') - new Date(b.dueDate||'9999'));
+        setTasks(sorted);
+        if (res.members && res.members.length > 0) setMembers(res.members);
+        try {
+          localStorage.setItem('cache_tasks', JSON.stringify(sorted));
+          if (res.members && res.members.length > 0) localStorage.setItem('cache_members', JSON.stringify(res.members));
+        } catch(ce) {}
+        showToast('✓ 任務已同步');
+        loadOk = true;
+        break;
+      } catch(e) {
+        if (attempt < maxTries) {
+          showToast(`⏳ 第 ${attempt} 次連線失敗，${attempt+1} 秒後重試...`);
+          await new Promise(r => setTimeout(r, (attempt) * 1000));
+        }
       }
-      showToast('⚠ 任務載入失敗，顯示快取資料');
     }
+    if (!loadOk) showToast('⚠ 連線失敗，顯示快取資料（請稍後重新整理）');
     setLoading(false);
 
     // ③ 背景另外載入會議（ICS，較慢不阻塞任務顯示）
