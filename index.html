@@ -279,7 +279,10 @@ const { useState, useEffect, useCallback, useRef } = React;
 // ════════════════════════════════════════════════════
 // ① CONFIG  ← 部署 Apps Script 後填入 URL
 // ════════════════════════════════════════════════════
-let GAS_URL = localStorage.getItem('gas_url') || '';
+// GAS 網址已內建，不需要手動設定（更換部署時只需改這一行）
+const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycby-eh45LbxCdyks7fhIoWpvkocbOVKBqXmH3zNvuwIjQdQqGpFGvpWIkzBskReWHHP7hg/exec';
+let GAS_URL = HARDCODED_GAS_URL;
+try { localStorage.setItem('gas_url', GAS_URL); } catch(e) {}
 
 // ════════════════════════════════════════════════════
 // ② UTILS
@@ -381,7 +384,7 @@ const fetchWithTimeout = (url, options={}, ms=30000) => {  // 30秒 timeout
 
 const api = {
   async get(action, params = {}) {
-    if (!GAS_URL) throw new Error('尚未設定 Apps Script 網址');
+    if (!GAS_URL) GAS_URL = HARDCODED_GAS_URL;
     const qs = new URLSearchParams({ action, ...params }).toString();
     const res = await fetchWithTimeout(`${GAS_URL}?${qs}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -390,7 +393,7 @@ const api = {
     return data;
   },
   async post(body) {
-    if (!GAS_URL) throw new Error('尚未設定 Apps Script 網址');
+    if (!GAS_URL) GAS_URL = HARDCODED_GAS_URL;
     // 使用 text/plain 避免 CORS preflight，GAS 端解析 JSON 字串
     const res = await fetchWithTimeout(GAS_URL, {
       method: 'POST',
@@ -480,7 +483,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
         </div>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
               <span style={{fontSize:11,color:"var(--text-muted)"}}>今日 {meetings.length} 場</span>
-              <span style={{fontSize:10,color:"#ccc"}}>v1.9</span>
+              <span style={{fontSize:10,color:"#ccc"}}>v2.0</span>
             </div>
       </div>
       <div className="stat-row">
@@ -990,7 +993,7 @@ const TAB_ICONS = {
 };
 
 const App = () => {
-  const [gasUrl, setGasUrl] = useState(GAS_URL);
+  const [gasUrl, setGasUrl] = useState(HARDCODED_GAS_URL);
   const [tab, setTab] = useState('dashboard');
   const [meetings, setMeetings] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -1010,7 +1013,7 @@ const App = () => {
     setGasUrl(url);
   };
 
-  useEffect(() => { if (gasUrl) loadAll(); }, [gasUrl]);
+  useEffect(() => { loadAll(); }, []); // 直接載入，GAS URL 已內建
 
   const loadAll = async (isRetry = false) => {
     // ① 立即顯示快取，畫面不空白
@@ -1141,7 +1144,8 @@ const App = () => {
   };
 
   // ── Render overlay views ──
-  if (!gasUrl) return <SetupScreen onSave={saveGasUrl} />;
+  // GAS URL 已內建，不顯示設定畫面
+  // 設定畫面已停用：GAS 網址內建於程式碼中
 
   if (view === 'add') return (
     <TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" />
