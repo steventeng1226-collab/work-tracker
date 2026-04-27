@@ -412,8 +412,9 @@ const api = {
   addTask:     data => api.post({ action:'addTask', ...data }),
   updateTask:  (id, data) => api.post({ action:'updateTask', id, ...data }),
   closeTask:    (id, data) => api.post({ action:'closeTask', id, ...data }),
-  deleteTask:   id => api.post({ action:'deleteTask', id }),
+  deleteTask:    id => api.post({ action:'deleteTask', id }),
   deleteHistory: id => api.post({ action:'deleteHistory', id }),
+  uploadImage:   (base64, filename, taskId) => api.post({ action:'uploadImage', base64, filename, taskId }),
 };
 
 // ════════════════════════════════════════════════════
@@ -483,7 +484,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick }) => {
         </div>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
               <span style={{fontSize:11,color:"var(--text-muted)"}}>今日 {meetings.length} 場</span>
-              <span style={{fontSize:10,color:"#ccc"}}>v2.0</span>
+              <span style={{fontSize:10,color:"#ccc"}}>v2.1</span>
             </div>
       </div>
       <div className="stat-row">
@@ -634,6 +635,7 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
   const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr() };
   const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
@@ -687,13 +689,64 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
 
       <div className="form-section">
         <div className="form-textarea-wrap">
-          <label>處理過程履歷</label>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+            <label style={{marginBottom:0}}>處理過程履歷</label>
+            <label style={{
+              display:'flex',alignItems:'center',gap:5,cursor:'pointer',
+              background:'#EBF3FA',color:'#185FA5',borderRadius:6,
+              padding:'4px 10px',fontSize:12,fontWeight:500,
+            }}>
+              {uploading ? '上傳中...' : '📷 上傳截圖'}
+              <input
+                type="file" accept="image/*" style={{display:'none'}}
+                disabled={uploading}
+                onChange={async e => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  setUploading(true);
+                  try {
+                    const reader = new FileReader();
+                    reader.onload = async ev => {
+                      try {
+                        const base64 = ev.target.result.split(',')[1];
+                        const res = await api.uploadImage(base64, file.name, form.id || 'new');
+                        if (res.ok) {
+                          const timestamp = new Date().toLocaleDateString('zh-TW');
+                          const link = `
+[📷 截圖 ${timestamp}](${res.driveUrl})`;
+                          set('progress', (form.progress || '') + link);
+                        } else {
+                          alert('上傳失敗：' + (res.error || '未知錯誤'));
+                        }
+                      } catch(err) {
+                        alert('上傳失敗：' + err.message);
+                      }
+                      setUploading(false);
+                    };
+                    reader.readAsDataURL(file);
+                  } catch(err) {
+                    alert('讀取圖片失敗');
+                    setUploading(false);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
           <textarea
             placeholder="記錄處理過程（可換行輸入）..."
             value={form.progress}
-            rows={5}
+            rows={6}
             onChange={e => set('progress', e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',
+              color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}
           />
+          {/* 顯示連結為可點擊 */}
+          {form.progress && form.progress.includes('drive.google.com') && (
+            <div style={{marginTop:6,fontSize:12,color:'#185FA5'}}>
+              💡 長按連結可在瀏覽器開啟截圖
+            </div>
+          )}
         </div>
       </div>
 
