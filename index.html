@@ -646,130 +646,146 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
   };
 
   return (
-    <div className="form-wrap">
-      <div className="page-hdr">
+    <div style={{height:'100vh', display:'flex', flexDirection:'column', background:'var(--bg)', overflow:'hidden'}}>
+
+      {/* ── 固定 Header ── */}
+      <div className="page-hdr" style={{flexShrink:0}}>
         <span className="back-btn" onClick={onBack}>‹</span>
         <span className="page-hdr-title">{mode === 'add' ? '新增任務' : '編輯任務'}</span>
         <span></span>
       </div>
 
-      <div className="form-section">
-        <div className="form-row">
-          <span className="f-label">優先等級</span>
-          <select value={form.priority} onChange={e => set('priority', e.target.value)}>
-            <option value="P1">P1 極急</option>
-            <option value="P2">P2 重要</option>
-            <option value="P3">P3 一般</option>
-            <option value="P4">P4 備忘</option>
-          </select>
-        </div>
-        <div className="form-row">
-          <span className="f-label">追蹤事項</span>
-          <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
-        </div>
-      </div>
+      {/* ── 可捲動中間區 ── */}
+      <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', gap:0}}>
 
-      <div className="form-section">
-        <div className="form-row">
-          <span className="f-label">負責人</span>
-          <select value={form.owner} onChange={e => set('owner', e.target.value)}>
-            <option value="">— 選擇 —</option>
-            {members.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </div>
-        <div className="form-row">
-          <span className="f-label">預定完成日</span>
-          <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
-        </div>
-        <div className="form-row">
-          <span className="f-label">實際完成日</span>
-          <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
-        </div>
-      </div>
-
-      <div className="form-section">
-        <div className="form-textarea-wrap">
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-            <label style={{marginBottom:0}}>處理過程履歷</label>
-            <label style={{
-              display:'flex',alignItems:'center',gap:5,cursor:'pointer',
-              background:'#EBF3FA',color:'#185FA5',borderRadius:6,
-              padding:'4px 10px',fontSize:12,fontWeight:500,
-            }}>
-              {uploading ? '上傳中...' : '📷 上傳截圖'}
-              <input
-                type="file" accept="image/*" style={{display:'none'}}
-                disabled={uploading}
-                onChange={async e => {
-                  const file = e.target.files[0];
-                  if (!file) return;
-                  setUploading(true);
-                  try {
-                    const reader = new FileReader();
-                    reader.onload = async ev => {
-                      try {
-                        const base64 = ev.target.result.split(',')[1];
-                        const res = await api.uploadImage(base64, file.name, form.id || 'new');
-                        if (res.ok) {
-                          const timestamp = new Date().toLocaleDateString('zh-TW');
-                          const link = `
-[📷 截圖 ${timestamp}](${res.driveUrl})`;
-                          set('progress', (form.progress || '') + link);
-                        } else {
-                          alert('上傳失敗：' + (res.error || '未知錯誤'));
-                        }
-                      } catch(err) {
-                        alert('上傳失敗：' + err.message);
-                      }
-                      setUploading(false);
-                    };
-                    reader.readAsDataURL(file);
-                  } catch(err) {
-                    alert('讀取圖片失敗');
-                    setUploading(false);
-                  }
-                  e.target.value = '';
-                }}
-              />
-            </label>
+        {/* 上半：固定欄位（不滑動） */}
+        <div style={{flexShrink:0, background:'var(--card)', borderBottom:'0.5px solid var(--border)'}}>
+          <div className="form-row">
+            <span className="f-label">優先等級</span>
+            <select value={form.priority} onChange={e => set('priority', e.target.value)}>
+              <option value="P1">P1 極急</option>
+              <option value="P2">P2 重要</option>
+              <option value="P3">P3 一般</option>
+              <option value="P4">P4 備忘</option>
+            </select>
           </div>
-          <textarea
-            placeholder="記錄處理過程（可換行輸入）..."
-            value={form.progress}
-            rows={6}
-            onChange={e => set('progress', e.target.value)}
-            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',
-              color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}
-          />
-          {/* 顯示連結為可點擊 */}
-          {form.progress && form.progress.includes('drive.google.com') && (
-            <div style={{marginTop:6,fontSize:12,color:'#185FA5'}}>
-              💡 長按連結可在瀏覽器開啟截圖
+          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
+            <span className="f-label">追蹤事項</span>
+            <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
+          </div>
+        </div>
+
+        <div style={{flexShrink:0, background:'var(--card)', borderBottom:'0.5px solid var(--border)', marginTop:8}}>
+          <div className="form-row">
+            <span className="f-label">負責人</span>
+            <select value={form.owner} onChange={e => set('owner', e.target.value)}>
+              <option value="">— 選擇 —</option>
+              {members.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
+            <span className="f-label">預定完成日</span>
+            <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+          </div>
+          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
+            <span className="f-label">實際完成日</span>
+            <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
+          </div>
+          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
+            <span className="f-label">立案日期</span>
+            <input type="date" value={form.createdDate || todayStr()} onChange={e => set('createdDate', e.target.value)} />
+          </div>
+        </div>
+
+        {/* 下半：彈性文字區（處理過程 flex:1，結案心得固定小） */}
+        <div style={{flex:1, display:'flex', flexDirection:'column', marginTop:8, minHeight:0}}>
+
+          {/* 處理過程履歷：佔剩餘大部分空間 */}
+          <div style={{
+            flex:1, display:'flex', flexDirection:'column',
+            background:'var(--card)', minHeight:0,
+          }}>
+            <div style={{
+              padding:'10px 16px 6px',
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+              flexShrink:0,
+            }}>
+              <span style={{fontSize:12, color:'var(--text-muted)', fontWeight:500}}>處理過程履歷</span>
+              <label style={{
+                display:'flex', alignItems:'center', gap:5, cursor:'pointer',
+                background:'#EBF3FA', color:'#185FA5', borderRadius:6,
+                padding:'4px 10px', fontSize:12, fontWeight:500,
+              }}>
+                {uploading ? '上傳中...' : '📷 截圖'}
+                <input
+                  type="file" accept="image/*" style={{display:'none'}}
+                  disabled={uploading}
+                  onChange={async e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    setUploading(true);
+                    try {
+                      const reader = new FileReader();
+                      reader.onload = async ev => {
+                        try {
+                          const base64 = ev.target.result.split(',')[1];
+                          const res = await api.uploadImage(base64, file.name, form.id || 'new');
+                          if (res.ok) {
+                            const timestamp = new Date().toLocaleDateString('zh-TW');
+                            const link = `\n[📷 截圖 ${timestamp}](${res.driveUrl})`;
+                            set('progress', (form.progress || '') + link);
+                          } else {
+                            alert('上傳失敗：' + (res.error || '未知錯誤'));
+                          }
+                        } catch(err) { alert('上傳失敗：' + err.message); }
+                        setUploading(false);
+                      };
+                      reader.readAsDataURL(file);
+                    } catch(err) { alert('讀取圖片失敗'); setUploading(false); }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
             </div>
-          )}
+            <textarea
+              placeholder="記錄處理過程（可換行輸入）..."
+              value={form.progress}
+              onChange={e => set('progress', e.target.value)}
+              style={{
+                flex:1, padding:'0 16px 8px',
+                border:'none', outline:'none', fontSize:14,
+                background:'transparent', color:'var(--text)',
+                fontFamily:'inherit', resize:'none', lineHeight:1.7,
+              }}
+            />
+          </div>
+
+          {/* 結案心得：固定小區塊，borderTop 分隔 */}
+          <div style={{
+            flexShrink:0, background:'var(--card)',
+            borderTop:'0.5px solid var(--border)',
+          }}>
+            <div style={{padding:'8px 16px 4px', fontSize:12, color:'var(--text-muted)', fontWeight:500}}>結案心得</div>
+            <textarea
+              placeholder="結案後的心得..."
+              value={form.reflection}
+              rows={2}
+              onChange={e => set('reflection', e.target.value)}
+              style={{
+                width:'100%', padding:'0 16px 8px',
+                border:'none', outline:'none', fontSize:14,
+                background:'transparent', color:'var(--text)',
+                fontFamily:'inherit', resize:'none', lineHeight:1.7,
+                display:'block',
+              }}
+            />
+          </div>
+
         </div>
       </div>
 
-      <div className="form-section">
-        <div className="form-textarea-wrap">
-          <label>結案心得</label>
-          <textarea
-            placeholder="結案後的心得與改善方向..."
-            value={form.reflection}
-            rows={3}
-            onChange={e => set('reflection', e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="form-section">
-        <div className="form-row">
-          <span className="f-label">立案日期</span>
-          <input type="date" value={form.createdDate || todayStr()} onChange={e => set('createdDate', e.target.value)} />
-        </div>
-      </div>
-
-      <div className="btn-row">
+      {/* ── 固定底部按鈕 ── */}
+      <div className="btn-row" style={{flexShrink:0, paddingBottom:'calc(16px + env(safe-area-inset-bottom, 0px))'}}>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? '儲存中...' : '存檔'}
         </button>
