@@ -314,6 +314,29 @@ body {
 }
 .settings-key-input:focus{border-color:#667eea;}
 
+/* ── 貼圖框 Paste Zone ── */
+.paste-zone-empty{
+  border:2px dashed #C4B5FD;border-radius:12px;background:#FAFAFF;
+  padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.15s;
+}
+.paste-zone-empty:hover,.paste-zone-empty.over{border-color:#667eea;background:#F0ECFF;}
+.paste-zone-filled{
+  border:1px solid #D4CCFF;border-radius:12px;background:#FAFAFF;padding:12px;
+}
+.img-thumb-wrap{position:relative;width:72px;height:72px;flex-shrink:0;}
+.img-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #E0DAFF;}
+.img-thumb-del{
+  position:absolute;top:-7px;right:-7px;width:20px;height:20px;
+  background:#E24B4A;color:#fff;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;cursor:pointer;font-weight:700;line-height:1;
+}
+.img-thumb-add{
+  width:72px;height:72px;border-radius:8px;border:2px dashed #C4B5FD;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#667eea;font-size:28px;background:#fff;flex-shrink:0;
+}
+
 /* ── 學習筆記 ── */
 .note-list-item{
   background:var(--card);border-left:3px solid #667eea;
@@ -579,7 +602,48 @@ ${emailText}`;
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
 
-// ── 共用 AI Prompt ────────────────────────────────────────────
+// ── 多圖分析（Gemini）────────────────────────────────────────
+const analyzeMultipleWithGemini = async (images, key) => {
+  if (!key) throw new Error('NOKEY');
+  const today = todayStr();
+  const prompt = buildAIPrompt(today, true);
+  const parts = [
+    ...images.map(img => ({inlineData:{mimeType:img.type||'image/jpeg',data:img.base64}})),
+    {text: prompt}
+  ];
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    {method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({contents:[{parts}]})}
+  );
+  if (!res.ok){if(res.status===429)throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試');throw new Error('Gemini 錯誤 '+res.status);}
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+};
+
+// ── 多圖分析（Claude）────────────────────────────────────────
+const analyzeMultipleWithClaude = async (images, key) => {
+  if (!key) throw new Error('未設定 Claude API Key');
+  const today = todayStr();
+  const prompt = buildAIPrompt(today, true);
+  const content = [
+    ...images.map(img => ({type:'image',source:{type:'base64',media_type:img.type||'image/jpeg',data:img.base64}})),
+    {type:'text',text:prompt}
+  ];
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,
+      'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,
+      messages:[{role:'user',content}]}),
+  });
+  if (!res.ok){if(res.status===429)throw new Error('Claude 請求過於頻繁，請稍後再試');if(res.status===401)throw new Error('Claude API Key 無效');throw new Error('Claude 錯誤 '+res.status);}
+  const data = await res.json();
+  const text = data.content?.[0]?.text||'';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+};
 const buildAIPrompt = (today, forImage = true) => {
   const src = forImage ? '分析這張圖片/文件' : '分析以下Email文字內容';
   return `你是專業工作助理，${src}，今天日期是${today}。
@@ -661,6 +725,9 @@ const analyzeTextWithClaude = async (emailText, key) => {
   const text = data.content?.[0]?.text || '';
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
+
+// ── 學習筆記 工具函式 ─────────────────────────────────────────
+const getNotes = () => {
   try { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); }
   catch(e) { return []; }
 };
@@ -1008,27 +1075,60 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
     }
   }, [mode]);
 
-  // ── Ctrl+V 貼上 & 拖曳（電腦版）──
+  // ── 多圖 pending 狀態 ──
+  const [pendingImages, setPendingImages] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const pasteInputRef = useRef(null);
+
+  const addToPending = useCallback((file) => {
+    const isHTMLFile = file.type==='text/html'||file.type==='message/rfc822'||/\.(html?|mht|eml)$/i.test(file.name);
+    if (isHTMLFile) { processFile(file); return; }
+    setPendingImages(prev => {
+      if (prev.length >= 3) { alert('最多同時分析 3 張'); return prev; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const dataUrl = ev.target.result;
+        setPendingImages(p => [...p, {
+          base64: dataUrl.split(',')[1], type: file.type||'image/jpeg',
+          preview: file.type==='application/pdf' ? null : dataUrl,
+        }]);
+      };
+      reader.readAsDataURL(file);
+      return prev;
+    });
+  }, [processFile]);
+
+  const analyzeAll = useCallback(async () => {
+    if (!pendingImages.length || analyzing) return;
+    const engine = localStorage.getItem('ai_engine')||'gemini';
+    const key = engine==='claude' ? localStorage.getItem('claude_key')||'' : localStorage.getItem('gemini_key')||'';
+    if (!key) { alert(`請先在 ⚙ 設定 ${engine==='claude'?'Claude':'Gemini'} API Key`); return; }
+    setAnalyzing(true);
+    try {
+      const result = engine==='claude'
+        ? await analyzeMultipleWithClaude(pendingImages, key)
+        : await analyzeMultipleWithGemini(pendingImages, key);
+      applyAIResult(result);
+      setPendingImages([]);
+    } catch(err) { alert('AI 分析失敗：' + err.message); }
+    setAnalyzing(false);
+  }, [pendingImages, analyzing, applyAIResult]);
+
   useEffect(() => {
     const onPaste = (e) => {
       if (analyzing) return;
       const img = Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/'));
       if (!img) return;
       e.preventDefault();
-      processFile(img.getAsFile());
+      addToPending(img.getAsFile());
     };
     document.addEventListener('paste', onPaste);
     return () => document.removeEventListener('paste', onPaste);
-  }, [analyzing, processFile]);
+  }, [analyzing, addToPending]);
 
-  const [dragging, setDragging] = useState(false);
-
-  const handleDrop = (e) => {
-    e.preventDefault(); setDragging(false);
-    if (!analyzing && e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-  };
+  const handleDrop  = (e) => { e.preventDefault(); setDragging(false); if(!analyzing) Array.from(e.dataTransfer.files).forEach(addToPending); };
   const handleDragOver  = (e) => { e.preventDefault(); setDragging(true); };
-  const handleDragLeave = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false); };
+  const handleDragLeave = (e) => { if(!e.currentTarget.contains(e.relatedTarget)) setDragging(false); };
 
   const handleSave = async () => {
     if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
@@ -1040,16 +1140,12 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   return (
     <div className="form-wrap" onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
       style={{position:'relative'}}>
-      {/* 拖曳時全頁覆蓋提示 */}
       {dragging && (
-        <div style={{
-          position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:999,
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:999,
           background:'rgba(102,126,234,0.15)',border:'3px dashed #667eea',
-          display:'flex',alignItems:'center',justifyContent:'center',
-          pointerEvents:'none',
-        }}>
+          display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
           <div style={{background:'#667eea',color:'#fff',padding:'16px 32px',borderRadius:12,fontSize:16,fontWeight:600}}>
-            🤖 放開讓 AI 分析
+            📎 放開加入分析
           </div>
         </div>
       )}
@@ -1059,18 +1155,42 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
         <span></span>
       </div>
 
-      {/* AI 快速填入（新增模式）+ 電腦版拖曳區 */}
+      {/* ── 貼圖框（新增模式）── */}
       {mode === 'add' && (
         <div style={{padding:'12px 16px 8px',background:'var(--card)',marginBottom:8}}>
-          <label className="ai-fill-btn" style={{opacity:analyzing?0.6:1}}>
-            <span>{analyzing?'🤖':'📷'}</span>
-            <span>{analyzing?'AI 分析中...':'拍照 / 截圖 / PDF → AI 自動填入'}</span>
-            <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing}
-              onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
-          </label>
-          <div style={{fontSize:11,color:'#bbb',textAlign:'center',marginTop:5}}>
-            電腦：Ctrl+V 截圖 / 拖入圖片、PDF、HTML ｜ 手機：拍照或選圖
-          </div>
+          {pendingImages.length === 0 ? (
+            /* 空白狀態：點擊或拖曳 */
+            <div className="paste-zone-empty" onClick={() => pasteInputRef.current?.click()}>
+              <div style={{fontSize:28,marginBottom:6}}>📎</div>
+              <div style={{fontSize:13,fontWeight:600,color:'#667eea'}}>拖入 / Ctrl+V 貼上 / 點擊選取</div>
+              <div style={{fontSize:11,color:'#bbb',marginTop:4}}>截圖、圖片、PDF、HTML ｜ 最多 3 張一起分析</div>
+            </div>
+          ) : (
+            /* 有圖片：顯示縮圖 + 分析按鈕 */
+            <div className="paste-zone-filled">
+              <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10,flexWrap:'wrap'}}>
+                {pendingImages.map((img, i) => (
+                  <div key={i} className="img-thumb-wrap">
+                    {img.preview
+                      ? <img src={img.preview} className="img-thumb" alt={`img${i+1}`}/>
+                      : <div className="img-thumb" style={{display:'flex',alignItems:'center',justifyContent:'center',background:'#F0ECFF',fontSize:28}}>📄</div>
+                    }
+                    <div className="img-thumb-del" onClick={() => setPendingImages(p=>p.filter((_,j)=>j!==i))}>×</div>
+                  </div>
+                ))}
+                {pendingImages.length < 3 && (
+                  <div className="img-thumb-add" onClick={() => pasteInputRef.current?.click()}>＋</div>
+                )}
+              </div>
+              <button className="ai-fill-btn" onClick={analyzeAll} disabled={analyzing} style={{margin:0}}>
+                <span>{analyzing ? '🤖' : '✨'}</span>
+                <span>{analyzing ? 'AI 分析中...' : `AI 分析（${pendingImages.length} 張）`}</span>
+              </button>
+            </div>
+          )}
+          <input ref={pasteInputRef} type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml"
+            multiple style={{display:'none'}}
+            onChange={e => { Array.from(e.target.files).forEach(addToPending); e.target.value=''; }}/>
         </div>
       )}
 
