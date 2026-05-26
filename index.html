@@ -354,7 +354,7 @@ const { useState, useEffect, useCallback, useRef, useMemo } = React;
 // ① CONFIG  ← 部署 Apps Script 後填入 URL
 // ════════════════════════════════════════════════════
 // GAS 網址已內建，不需要手動設定（更換部署時只需改這一行）
-const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycby-eh45LbxCdyks7fhIoWpvkocbOVKBqXmH3zNvuwIjQdQqGpFGvpWIkzBskReWHHP7hg/exec';
+const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycbxksWZKozPBxA18N30pNfaWCIJ16A4TLcOO8efKRiJwQcNxkb2dPHKy4E80EUEnU2UpvA/exec';
 let GAS_URL = HARDCODED_GAS_URL;
 try { localStorage.setItem('gas_url', GAS_URL); } catch(e) {}
 
@@ -891,12 +891,12 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
           onDrop={handleDrop} onDragOver={handleDragOver}>
           <label className="ai-fill-btn" style={{opacity:analyzing?0.6:1}}>
             <span>{analyzing?'🤖':'📷'}</span>
-            <span>{analyzing?'AI 分析中...':'拍照 / 截圖 / Ctrl+V 貼上 → AI 自動填入'}</span>
-            <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing}
+            <span>{analyzing?'AI 分析中...':'拍照 / 截圖 / PDF → AI 自動填入'}</span>
+            <input type="file" accept="image/*,.pdf" style={{display:'none'}} disabled={analyzing}
               onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
           </label>
           <div style={{fontSize:11,color:'#bbb',textAlign:'center',marginTop:5}}>
-            電腦：Ctrl+V 貼上截圖 ｜ 手機：拍照或選圖
+            電腦：Ctrl+V 截圖 / 拖入圖片或PDF ｜ 手機：拍照或選圖
           </div>
         </div>
       )}
@@ -977,7 +977,7 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
               <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}
                 onDrop={handleDrop} onDragOver={handleDragOver}>
                 {analyzing?'🤖 分析中...':'🤖 AI追加（拍照/貼上）'}
-                <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing}
+                <input type="file" accept="image/*,.pdf" style={{display:'none'}} disabled={analyzing}
                   onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
               </label>
             )}
@@ -1671,7 +1671,11 @@ const App = () => {
   };
 
   const handleSavedTask = (id, data) => {
-    setTasks(prev => sortByPriority(prev.map(t => t.id === id ? { ...t, ...data } : t)));
+    setTasks(prev => {
+      const updated = sortByPriority(prev.map(t => t.id === id ? { ...t, ...data } : t));
+      try { localStorage.setItem('cache_tasks', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
     showToast('✓ 已更新');
   };
 
