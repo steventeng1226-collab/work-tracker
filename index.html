@@ -197,7 +197,13 @@ body {
 .created-val { font-size: 14px; color: var(--text-muted); }
 
 /* ── Buttons ── */
-.btn-row { display: flex; gap: 10px; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.btn-row {
+  display: flex; gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  position: sticky; bottom: 0; z-index: 10;
+  background: var(--card);
+  box-shadow: 0 -1px 8px rgba(0,0,0,0.08);
+}
 .btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
 .btn:active { opacity: 0.75; }
 .btn-primary { background: var(--red); color: #fff; }
@@ -449,14 +455,26 @@ const analyzeWithGemini = async (base64, mimeType) => {
   const key = localStorage.getItem('gemini_key') || '';
   if (!key) throw new Error('NOKEY');
   const today = todayStr();
-  const prompt = `分析這張圖片，今天日期是${today}。只回傳JSON格式（不含markdown）：
-{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二"}
+  const prompt = `你是專業工作助理，分析這張圖片，今天日期是${today}。
+只回傳JSON格式（不含markdown、不含其他文字）：
+{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
 
-規則：
-- 寄件人/交辦人是Cliff → priority必須是P1
+【重點摘要原則 - 全面性優先】
+- progress條列所有重要資訊，寧可多點也不能漏掉關鍵細節
+- 每個要點獨立一行，以•開頭
+- 包含：任務背景、要求內容、關係人、數字/日期、注意事項
+- 最多10點，但內容完整比點數少更重要
+
+【next_step原則 - 結論先行 + 見林再見樹】
+- 先說最關鍵的一個行動（見林）
+- 用動詞開頭：確認/發送/聯繫/準備/回覆/安排
+- 20字內，簡潔有力
+
+【優先等級判斷】
+- 寄件人/交辦人是Cliff → P1（無例外）
 - 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
-- 購物/家事/個人/健康/生活類 → category為生活，否則為工作
-- progress條列，每點精簡，最多5點`;
+- 購物/家事/個人/健康 → category為生活`;
+
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
@@ -565,18 +583,25 @@ const PCOL = { P1:'#E24B4A', P2:'#EF9F27', P3:'#1a1a1a', P4:'#3B6D11' }; // P1=�
 const TaskRow = ({ task, onClick }) => {
   const p = normP(task.priority);
   const overdue = isOverdue(task.dueDate);
-  // P2 逾期 → 紅色；其他依優先等級（P1紅/P2橘/P3黑/P4綠）
   const titleColor = (p === 'P2' && overdue) ? '#E24B4A' : (PCOL[p] || '#1a1a1a');
   return (
-    <div className="t-row" onClick={() => onClick(task)}>
+    <div className="t-row" style={{alignItems: task.next_step ? 'flex-start' : 'center'}} onClick={() => onClick(task)}>
       <PBadge level={p} />
-      <span style={{
-        flex:1, fontSize:14, whiteSpace:'nowrap', overflow:'hidden',
-        textOverflow:'ellipsis', color: titleColor, fontWeight: 400,
-      }}>{task.title}</span>
-      <div className="t-date-area">
+      <div style={{flex:1, overflow:'hidden', paddingTop: task.next_step ? 1 : 0}}>
+        <div style={{
+          fontSize:14, whiteSpace:'nowrap', overflow:'hidden',
+          textOverflow:'ellipsis', color: titleColor, fontWeight:400,
+        }}>{task.title}</div>
+        {task.next_step && (
+          <div style={{
+            fontSize:11, color:'#667eea', marginTop:2,
+            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+          }}>→ {task.next_step}</div>
+        )}
+      </div>
+      <div className="t-date-area" style={{paddingTop: task.next_step ? 2 : 0}}>
         {overdue && <span className="overdue-pill">逾期</span>}
-        <span style={{ fontSize:11, color: overdue ? '#E24B4A' : '#bbb' }}>
+        <span style={{fontSize:11, color: overdue ? '#E24B4A' : '#bbb'}}>
           {fmtShort(task.dueDate)}
         </span>
       </div>
@@ -642,28 +667,6 @@ const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNote
         </div>
       )}
 
-      {/* 🗓 今日會議 */}
-      <div style={{background:'#F2FAF5',marginTop:10}}>
-        <div className="dsec-hdr">
-          <div className="dsec-left"><span style={{fontSize:14}}>🗓</span><span className="dsec-title" style={{color:'#1D7A50'}}>今日會議</span></div>
-          <span className="dsec-count">{meetings.length} 場</span>
-        </div>
-      </div>
-      {meetings.length === 0
-        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',borderBottom:'0.5px solid var(--divider)'}}>今日無會議</div>
-        : meetings.map((m,i) => {
-            const over = isMeetingOver(m);
-            const st = (m.startUTC?utcToLocalTime(m.startUTC):m.startTime)||m.startTime;
-            const et = (m.endUTC?utcToLocalTime(m.endUTC):m.endTime)||m.endTime;
-            return (
-              <div key={i} style={{background:over?'#fafafa':'#fff',padding:'10px 16px',borderBottom:'0.5px solid #f2f2f2',display:'flex',alignItems:'center',gap:9}}>
-                <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,background:over?'#ddd':'#1D9E75'}}/>
-                <span style={{fontSize:12,width:74,flexShrink:0,whiteSpace:'nowrap',color:over?'#ccc':'#555',fontWeight:over?400:500,textDecoration:over?'line-through':'none'}}>{st}{et?'–'+et:''}</span>
-                <span style={{flex:1,fontSize:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:over?'#bbb':'#1a1a1a',fontWeight:over?400:600,textDecoration:over?'line-through':'none'}}>{m.title}</span>
-              </div>
-            );
-          })
-      }
 
       {/* 💼 工作任務 */}
       <div style={{background:'linear-gradient(90deg,#EBF3FA,#F5F9FF)',marginTop:10}}>
@@ -801,10 +804,9 @@ const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
 // ⑦ TASK FORM PAGE (新增 / 編輯)
 // ════════════════════════════════════════════════════
 const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultCategory = '工作' }) => {
-  const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr(), category: defaultCategory };
+  const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr(), category: defaultCategory, next_step:'' };
   const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [allNotes] = useState(() => getNotes());
@@ -814,44 +816,59 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   );
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleAIAnalyze = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // ── 核心：處理圖片（按鈕 / 貼上 / 拖曳共用）──
+  const processFile = useCallback(async (file) => {
     const key = localStorage.getItem('gemini_key') || '';
-    if (!key) { alert('請先點右上角 ⚙ 設定 Gemini API Key'); e.target.value=''; return; }
+    if (!key) { alert('請先點右上角 ⚙ 設定 Gemini API Key'); return; }
     setAnalyzing(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async ev => {
-        try {
-          const base64 = ev.target.result.split(',')[1];
-          const result = await analyzeWithGemini(base64, file.type||'image/jpeg');
-          if (mode === 'add') {
-            setForm(f => ({
-              ...f,
-              priority: result.priority || f.priority,
-              title:    result.title    || f.title,
-              owner:    result.owner    || f.owner,
-              dueDate:  result.dueDate  || f.dueDate,
-              category: result.category || f.category,
-              progress: result.progress || f.progress,
-            }));
-          } else {
-            // 編輯模式：追加進度，獨立段落 + 日期標記
-            const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
-            const entry = `[${dateStr} AI更新]\n${result.progress}`;
-            setForm(f => ({ ...f, progress: f.progress ? f.progress + '\n\n' + entry : entry }));
-          }
-        } catch(err) {
-          if (err.message==='NOKEY') alert('請先設定 Gemini API Key');
-          else alert('AI 分析失敗：' + err.message);
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const base64 = ev.target.result.split(',')[1];
+        const result = await analyzeWithGemini(base64, file.type || 'image/jpeg');
+        if (mode === 'add') {
+          setForm(f => ({
+            ...f,
+            priority:  result.priority  || f.priority,
+            title:     result.title     || f.title,
+            owner:     result.owner     || f.owner,
+            dueDate:   result.dueDate   || f.dueDate,
+            category:  result.category  || f.category,
+            progress:  result.progress  || f.progress,
+            next_step: result.next_step || f.next_step,
+          }));
+        } else {
+          const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+          const entry = `[${dateStr} AI更新]\n${result.progress}`;
+          setForm(f => ({
+            ...f,
+            progress:  f.progress ? f.progress + '\n\n' + entry : entry,
+            next_step: result.next_step || f.next_step,
+          }));
         }
-        setAnalyzing(false);
-      };
-      reader.readAsDataURL(file);
-    } catch(err) { alert('讀取圖片失敗'); setAnalyzing(false); }
-    e.target.value = '';
-  };
+      } catch(err) {
+        alert(err.message === 'NOKEY' ? '請先設定 Gemini API Key' : 'AI 分析失敗：' + err.message);
+      }
+      setAnalyzing(false);
+    };
+    reader.readAsDataURL(file);
+  }, [mode]);
+
+  // ── Ctrl+V 貼上 & 拖曳（電腦版）──
+  useEffect(() => {
+    const onPaste = (e) => {
+      if (analyzing) return;
+      const img = Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/'));
+      if (!img) return;
+      e.preventDefault();
+      processFile(img.getAsFile());
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [analyzing, processFile]);
+
+  const handleDrop  = (e) => { e.preventDefault(); if (!analyzing && e.dataTransfer.files[0]?.type.startsWith('image/')) processFile(e.dataTransfer.files[0]); };
+  const handleDragOver = (e) => e.preventDefault();
 
   const handleSave = async () => {
     if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
@@ -868,15 +885,19 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
         <span></span>
       </div>
 
-      {/* AI 快速填入（新增模式）*/}
+      {/* AI 快速填入（新增模式）+ 電腦版拖曳區 */}
       {mode === 'add' && (
-        <div style={{padding:'12px 16px 8px',background:'var(--card)',marginBottom:8}}>
+        <div style={{padding:'12px 16px 8px',background:'var(--card)',marginBottom:8}}
+          onDrop={handleDrop} onDragOver={handleDragOver}>
           <label className="ai-fill-btn" style={{opacity:analyzing?0.6:1}}>
             <span>{analyzing?'🤖':'📷'}</span>
-            <span>{analyzing?'AI 分析中...':'AI 快速填入（拍照 / 截圖 Email）'}</span>
-            <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing} onChange={handleAIAnalyze}/>
+            <span>{analyzing?'AI 分析中...':'拍照 / 截圖 / Ctrl+V 貼上 → AI 自動填入'}</span>
+            <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing}
+              onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
           </label>
-          <div style={{fontSize:11,color:'#bbb',textAlign:'center',marginTop:5}}>拍 Email 或文件截圖，AI 自動填寫所有欄位</div>
+          <div style={{fontSize:11,color:'#bbb',textAlign:'center',marginTop:5}}>
+            電腦：Ctrl+V 貼上截圖 ｜ 手機：拍照或選圖
+          </div>
         </div>
       )}
 
@@ -911,9 +932,7 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
                 background: form.category===cat ? (cat==='工作'?'#185FA5':'#3B6D11') : '#fff',
                 color: form.category===cat ? '#fff' : 'var(--text-muted)',
                 fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'inherit',
-              }}>
-                {cat==='工作'?'💼 工作':'🏠 生活'}
-              </button>
+              }}>{cat==='工作'?'💼 工作':'🏠 生活'}</button>
             ))}
           </div>
         </div>
@@ -954,57 +973,37 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
         <div className="form-textarea-wrap">
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
             <label style={{marginBottom:0}}>處理過程履歷</label>
-            <div style={{display:'flex',gap:6}}>
-              {/* AI 追加進度（編輯模式）*/}
-              {mode === 'edit' && (
-                <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}>
-                  {analyzing?'🤖 分析中...':'🤖 AI追加進度'}
-                  <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing} onChange={handleAIAnalyze}/>
-                </label>
-              )}
-              <label style={{
-                display:'flex',alignItems:'center',gap:4,cursor:'pointer',
-                background:'#EBF3FA',color:'#185FA5',borderRadius:6,
-                padding:'4px 9px',fontSize:11,fontWeight:500,
-              }}>
-                {uploading?'上傳中...':'📷 截圖'}
-                <input type="file" accept="image/*" style={{display:'none'}} disabled={uploading}
-                  onChange={async e => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    setUploading(true);
-                    try {
-                      const reader = new FileReader();
-                      reader.onload = async ev => {
-                        try {
-                          const base64 = ev.target.result.split(',')[1];
-                          const res = await api.uploadImage(base64, file.name, form.id||'new');
-                          if (res.ok) {
-                            const ts = new Date().toLocaleDateString('zh-TW');
-                            set('progress', (form.progress||'') + `\n[📷 截圖 ${ts}](${res.driveUrl})`);
-                          } else { alert('上傳失敗：'+(res.error||'未知')); }
-                        } catch(err) { alert('上傳失敗：'+err.message); }
-                        setUploading(false);
-                      };
-                      reader.readAsDataURL(file);
-                    } catch(err) { alert('讀取失敗'); setUploading(false); }
-                    e.target.value='';
-                  }}
-                />
+            {mode === 'edit' && (
+              <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}
+                onDrop={handleDrop} onDragOver={handleDragOver}>
+                {analyzing?'🤖 分析中...':'🤖 AI追加（拍照/貼上）'}
+                <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing}
+                  onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
               </label>
-            </div>
+            )}
           </div>
           <textarea
-            placeholder="記錄處理過程（可換行輸入）..."
-            value={form.progress} rows={6}
+            placeholder="AI 自動填入，或手動記錄處理過程..."
+            value={form.progress} rows={8}
             onChange={e => set('progress', e.target.value)}
-            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',
-              color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}
+            style={{width:'100%',border:'none',outline:'none',fontSize:13,background:'transparent',
+              color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.8}}
           />
-          {form.progress && form.progress.includes('drive.google.com') && (
-            <div style={{marginTop:6,fontSize:12,color:'#185FA5'}}>💡 長按連結可在瀏覽器開啟截圖</div>
-          )}
         </div>
+      </div>
+
+      {/* AI 下一步建議 */}
+      <div className="form-section">
+        <div className="form-row" style={{alignItems:'flex-start',gap:8}}>
+          <span className="f-label" style={{paddingTop:4,color:'#667eea',fontWeight:600}}>🔜 下一步</span>
+          <input type="text"
+            placeholder="AI 自動產生，或手動輸入..."
+            value={form.next_step}
+            onChange={e => set('next_step', e.target.value)}
+            style={{fontSize:13,color:'#185FA5',fontWeight:500}}
+          />
+        </div>
+        {form.next_step && <div style={{padding:'0 16px 8px',fontSize:11,color:'#bbb'}}>此欄內容將顯示在首頁任務列表下方</div>}
       </div>
 
       <div className="form-section">
@@ -1023,10 +1022,10 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
       </div>
 
       <div className="btn-row">
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{flex:2}}>
           {saving?'儲存中...':'存檔'}
         </button>
-        <button className="btn btn-secondary" onClick={onBack}>取消</button>
+        <button className="btn btn-secondary" onClick={onBack} style={{flex:1}}>取消</button>
       </div>
     </div>
   );
@@ -1556,6 +1555,24 @@ const App = () => {
   };
 
   useEffect(() => { loadAll(); }, []); // 直接載入，GAS URL 已內建
+
+  // ── 背景自動同步（每 60 秒，不顯示 loading）──
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      if (view !== 'list') return;
+      try {
+        const res = await api.get('getAll', { date: todayStr() });
+        if (res?.tasks) {
+          const sorted = sortByPriority(res.tasks);
+          setTasks(sorted);
+          try { localStorage.setItem('cache_tasks', JSON.stringify(sorted)); } catch(e) {}
+        }
+        if (res?.members) setMembers(res.members);
+      } catch(e) {}
+      loadHistory();
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [view]);
 
   const loadAll = async (isRetry = false) => {
     // ① 立即顯示快取，畫面不空白
