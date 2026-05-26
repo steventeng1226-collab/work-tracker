@@ -206,7 +206,7 @@ body {
 .btn-edit { background: var(--blue-bg); color: var(--blue); }
 
 /* ── Detail ── */
-.detail-wrap { background: var(--bg); min-height: 100%; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+.detail-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
 .detail-block { background: var(--card); margin-bottom: 8px; }
 .detail-meta { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 18px; }
 .detail-field { }
@@ -264,6 +264,74 @@ body {
 .setup-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
 .setup-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
 .setup-input:focus { border-color: var(--red); }
+
+/* ── v3.0 新增 ── */
+.ai-fill-btn {
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:12px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  color:#fff;font-size:14px;font-weight:500;cursor:pointer;
+  font-family:inherit;transition:opacity 0.15s;
+}
+.ai-fill-btn:active{opacity:0.8;}
+.ai-append-btn{
+  display:flex;align-items:center;gap:4px;
+  background:#F0EBF8;color:#5B3EA0;border-radius:6px;
+  padding:4px 9px;font-size:11px;font-weight:500;
+  border:none;cursor:pointer;font-family:inherit;transition:opacity 0.15s;
+}
+.ai-append-btn:active{opacity:0.8;}
+.cat-tab-bar{
+  display:flex;gap:8px;padding:10px 14px 8px;
+  background:var(--card);border-bottom:0.5px solid var(--border);
+}
+.cat-tab-btn{
+  flex:1;padding:8px 0;border-radius:8px;
+  border:0.5px solid var(--border);background:#fff;
+  color:var(--text-muted);font-size:13px;font-weight:500;
+  cursor:pointer;font-family:inherit;transition:all 0.15s;
+}
+.cat-tab-btn.active{background:var(--red);color:#fff;border-color:var(--red);}
+.week-card{margin:10px 12px 0;border-radius:10px;overflow:hidden;border:1px solid #EDD9A3;background:#FFFBF0;}
+.week-card-hdr{padding:9px 14px;display:flex;align-items:center;gap:6px;border-bottom:0.5px solid #EDD9A3;}
+.week-row{padding:9px 14px;border-bottom:0.5px solid #EDD9A3;display:flex;align-items:center;gap:9px;cursor:pointer;}
+.week-row:last-child{border-bottom:none;}
+.week-row:active{background:#FFF3CC;}
+.dsec-hdr{padding:10px 16px 8px;display:flex;align-items:center;justify-content:space-between;}
+.dsec-left{display:flex;align-items:center;gap:6px;}
+.dsec-title{font-size:13px;font-weight:600;}
+.dsec-count{font-size:12px;color:var(--text-muted);}
+.settings-key-input{
+  width:100%;border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;font-size:13px;font-family:inherit;
+  outline:none;color:var(--text);background:#fff;
+}
+.settings-key-input:focus{border-color:#667eea;}
+
+/* ── 學習筆記 ── */
+.note-list-item{
+  background:var(--card);border-left:3px solid #667eea;
+  padding:11px 14px 11px 13px;cursor:pointer;
+  border-bottom:0.5px solid var(--divider);
+}
+.note-list-item:active{background:#FAFAFF;}
+.note-cat-tag{font-size:10px;color:#667eea;font-weight:600;margin-bottom:3px;}
+.note-conclusion-text{font-size:13px;font-weight:500;color:#1a1a1a;line-height:1.5;}
+.note-tags-text{font-size:10px;color:#bbb;margin-top:3px;}
+.note-detail-wrap{
+  padding:8px 16px 12px 16px;background:#FAFAFF;
+  border-left:3px solid #D4CCFF;border-bottom:0.5px solid var(--divider);
+}
+.note-reminder-bar{
+  background:#F3F0FF;border-left:3px solid #667eea;
+  padding:10px 14px;margin-bottom:8px;
+}
+.dash-notes-row{
+  background:var(--card);padding:10px 16px;
+  border-left:3px solid #667eea;border-bottom:0.5px solid var(--divider);
+  cursor:pointer;
+}
+.dash-notes-row:active{background:#FAFAFF;}
 </style>
 </head>
 <body>
@@ -274,7 +342,7 @@ body {
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
 // ════════════════════════════════════════════════════
 // ① CONFIG  ← 部署 Apps Script 後填入 URL
@@ -366,6 +434,45 @@ const normP = p => { const m = String(p||'').match(/P[1-4]/); return m ? m[0] : 
 const PMAP = { P1:{badge:'p1-b',text:'p1-t',label:'緊急'}, P2:{badge:'p2-b',text:'p2-t',label:'重要'}, P3:{badge:'p3-b',text:'p3-t',label:'一般'}, P4:{badge:'p4-b',text:'p4-t',label:'備忘'} };
 const pInfo = p => PMAP[p] || PMAP.P3;
 
+const sortByPriority = tasks => [...tasks].sort((a, b) => {
+  const pa = parseInt(normP(a.priority).slice(1));
+  const pb = parseInt(normP(b.priority).slice(1));
+  if (pa !== pb) return pa - pb;
+  const oa = isOverdue(a.dueDate) ? 0 : 1;
+  const ob = isOverdue(b.dueDate) ? 0 : 1;
+  if (oa !== ob) return oa - ob;
+  return new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999');
+});
+
+// ── Gemini AI 圖片分析 ──────────────────────────────────────
+const analyzeWithGemini = async (base64, mimeType) => {
+  const key = localStorage.getItem('gemini_key') || '';
+  if (!key) throw new Error('NOKEY');
+  const today = todayStr();
+  const prompt = `分析這張圖片，今天日期是${today}。只回傳JSON格式（不含markdown）：
+{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二"}
+
+規則：
+- 寄件人/交辦人是Cliff → priority必須是P1
+- 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
+- 購物/家事/個人/健康/生活類 → category為生活，否則為工作
+- progress條列，每點精簡，最多5點`;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[
+        {inlineData:{mimeType:mimeType||'image/jpeg',data:base64}},
+        {text:prompt}
+      ]}]})
+    }
+  );
+  if (!res.ok) throw new Error('Gemini API 錯誤 ' + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+};
+
 // ════════════════════════════════════════════════════
 // ③ API
 // ════════════════════════════════════════════════════
@@ -417,8 +524,24 @@ const api = {
   uploadImage:   (base64, filename, taskId) => api.post({ action:'uploadImage', base64, filename, taskId }),
 };
 
-// ════════════════════════════════════════════════════
-// ④ SMALL COMPONENTS
+// ── 學習筆記 工具函式 ─────────────────────────────────────────
+const getNotes = () => {
+  try { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); }
+  catch(e) { return []; }
+};
+const saveNotes = notes => {
+  try { localStorage.setItem('personal_notes', JSON.stringify(notes)); } catch(e) {}
+};
+// 比對筆記標籤 vs 任務標題/類別，找出相關筆記
+const matchNotes = (notes, title, category) => {
+  if (!notes.length || (!title && !category)) return [];
+  const hay = ((title||'') + ' ' + (category||'')).toLowerCase();
+  return notes.filter(n => {
+    if (!n.tags) return false;
+    return n.tags.split(/[,，\s]+/).map(t=>t.trim().toLowerCase()).filter(Boolean)
+      .some(tag => tag && hay.includes(tag));
+  });
+};
 // ════════════════════════════════════════════════════
 const PBadge = ({ level }) => {
   const p = normP(level);
@@ -464,87 +587,133 @@ const TaskRow = ({ task, onClick }) => {
 // ════════════════════════════════════════════════════
 // ⑤ DASHBOARD
 // ════════════════════════════════════════════════════
-const Dashboard = ({ meetings, tasks, onTaskClick }) => {
-  const p1cnt = tasks.filter(t => t.priority === 'P1').length;
-  const p2cnt = tasks.filter(t => t.priority === 'P2').length;
-  const overdueCnt = tasks.filter(t => isOverdue(t.dueDate)).length;
-  const { now, week } = thisWeekRange();
-  const weekCnt = tasks.filter(t => {
+const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNotes, onAddNote }) => {
+  const { week } = thisWeekRange();
+  const PDOT = {P1:'#E24B4A',P2:'#EF9F27',P3:'#888',P4:'#3B6D11'};
+
+  const workTasks = sortByPriority(tasks.filter(t => (t.category||'工作') !== '生活'));
+  const lifeTasks = sortByPriority(tasks.filter(t => (t.category||'工作') === '生活'));
+  const weekTasks = sortByPriority(workTasks.filter(t => {
     if (!t.dueDate) return false;
     const d = new Date(t.dueDate + 'T00:00:00');
-    return d >= now && d <= week;
-  }).length;
+    const now = new Date(); now.setHours(0,0,0,0);
+    return d <= week;
+  }));
 
   return (
     <div>
+      {/* Header */}
       <div className="date-bar">
         <div>
           <span className="date-main">{todayDisplay()}</span>
           <span className="date-wd">{todayWD()}</span>
         </div>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-              <span style={{fontSize:11,color:"var(--text-muted)"}}>今日 {meetings.length} 場</span>
-              <span style={{fontSize:10,color:"#ccc"}}>v2.1</span>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:10,color:'#ccc'}}>v3.0</span>
+          <span onClick={onSettings} style={{fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}}>⚙</span>
+        </div>
+      </div>
+
+      {/* 🔥 本週截止（工作任務）*/}
+      {weekTasks.length > 0 && (
+        <div className="week-card">
+          <div className="week-card-hdr">
+            <span style={{fontSize:14}}>🔥</span>
+            <span style={{fontSize:12,fontWeight:600,color:'#854F0B'}}>本週截止</span>
+            <span style={{fontSize:11,color:'#C07830',marginLeft:'auto',background:'#FAEEDA',padding:'1px 8px',borderRadius:10}}>{weekTasks.length} 項</span>
+          </div>
+          {weekTasks.map((t,i) => {
+            const p = normP(t.priority);
+            const over = isOverdue(t.dueDate);
+            return (
+              <div key={i} className="week-row" onClick={() => onTaskClick(t)}
+                style={{background:over?'#FFF3F0':'transparent'}}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:PDOT[p],flexShrink:0}}/>
+                <div style={{flex:1,overflow:'hidden'}}>
+                  <div style={{fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:over?'#E24B4A':'#1a1a1a'}}>{t.title}</div>
+                  {t.owner&&<div style={{fontSize:10,color:'#bbb',marginTop:1}}>{t.owner}</div>}
+                </div>
+                <span style={{fontSize:11,fontWeight:500,flexShrink:0,color:over?'#E24B4A':'#C07830',whiteSpace:'nowrap'}}>
+                  {over?'⚠ 逾期':fmtShort(t.dueDate)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 🗓 今日會議 */}
+      <div style={{background:'#F2FAF5',marginTop:10}}>
+        <div className="dsec-hdr">
+          <div className="dsec-left"><span style={{fontSize:14}}>🗓</span><span className="dsec-title" style={{color:'#1D7A50'}}>今日會議</span></div>
+          <span className="dsec-count">{meetings.length} 場</span>
+        </div>
+      </div>
+      {meetings.length === 0
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',borderBottom:'0.5px solid var(--divider)'}}>今日無會議</div>
+        : meetings.map((m,i) => {
+            const over = isMeetingOver(m);
+            const st = (m.startUTC?utcToLocalTime(m.startUTC):m.startTime)||m.startTime;
+            const et = (m.endUTC?utcToLocalTime(m.endUTC):m.endTime)||m.endTime;
+            return (
+              <div key={i} style={{background:over?'#fafafa':'#fff',padding:'10px 16px',borderBottom:'0.5px solid #f2f2f2',display:'flex',alignItems:'center',gap:9}}>
+                <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,background:over?'#ddd':'#1D9E75'}}/>
+                <span style={{fontSize:12,width:74,flexShrink:0,whiteSpace:'nowrap',color:over?'#ccc':'#555',fontWeight:over?400:500,textDecoration:over?'line-through':'none'}}>{st}{et?'–'+et:''}</span>
+                <span style={{flex:1,fontSize:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:over?'#bbb':'#1a1a1a',fontWeight:over?400:600,textDecoration:over?'line-through':'none'}}>{m.title}</span>
+              </div>
+            );
+          })
+      }
+
+      {/* 💼 工作任務 */}
+      <div style={{background:'linear-gradient(90deg,#EBF3FA,#F5F9FF)',marginTop:10}}>
+        <div className="dsec-hdr">
+          <div className="dsec-left"><span style={{fontSize:14}}>💼</span><span className="dsec-title" style={{color:'var(--blue)'}}>工作任務</span></div>
+          <span className="dsec-count">{workTasks.length} 項</span>
+        </div>
+      </div>
+      {workTasks.length===0
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb'}}>無進行中工作任務</div>
+        : workTasks.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)
+      }
+
+      {/* 🏠 生活事項 */}
+      <div style={{background:'linear-gradient(90deg,#EAF3DE,#F5FAF0)',marginTop:10}}>
+        <div className="dsec-hdr">
+          <div className="dsec-left"><span style={{fontSize:14}}>🏠</span><span className="dsec-title" style={{color:'var(--green)'}}>生活事項</span></div>
+          <span className="dsec-count">{lifeTasks.length} 項</span>
+        </div>
+      </div>
+      {lifeTasks.length===0
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',marginBottom:8}}>無生活事項</div>
+        : lifeTasks.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)
+      }
+
+      {/* 📝 學習筆記 */}
+      <div style={{background:'linear-gradient(90deg,#F0ECFF,#F8F5FF)',marginTop:10}}>
+        <div className="dsec-hdr">
+          <div className="dsec-left">
+            <span style={{fontSize:14}}>📝</span>
+            <span className="dsec-title" style={{color:'#5B3EA0'}}>學習筆記</span>
+          </div>
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            <span className="dsec-count">{(notes||[]).length} 條</span>
+            <span onClick={onViewNotes} style={{fontSize:12,color:'#667eea',cursor:'pointer',fontWeight:500}}>全部 ›</span>
+            <span onClick={onAddNote} style={{fontSize:20,color:'#667eea',cursor:'pointer',fontWeight:600,lineHeight:1}}>＋</span>
+          </div>
+        </div>
+      </div>
+      {(!notes||notes.length===0)
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',marginBottom:8}}>點 ＋ 新增第一條學習筆記</div>
+        : notes.slice(0,3).map((n,i) => (
+            <div key={n.id} className="dash-notes-row" onClick={onViewNotes}>
+              {n.category && <div className="note-cat-tag">{n.category}</div>}
+              <div className="note-conclusion-text">{n.conclusion}</div>
+              {n.tags && <div className="note-tags-text">{n.tags}</div>}
             </div>
-      </div>
-      <div className="stat-row">
-        <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{p1cnt}</div><div className="stat-lbl">P1 極急</div></div>
-        <div className="stat-card"><div className="stat-num" style={{color:'var(--orange)'}}>{p2cnt}</div><div className="stat-lbl">P2 重要</div></div>
-        <div className="stat-card"><div className="stat-num" style={{color:'var(--red)'}}>{overdueCnt}</div><div className="stat-lbl">逾期</div></div>
-        <div className="stat-card"><div className="stat-num" style={{color:'var(--gray)'}}>{weekCnt}</div><div className="stat-lbl">本週到期</div></div>
-      </div>
-
-      <div style={{background:'var(--green-bg)'}}>
-        <div className="sec-hdr">
-          <div className="sec-hdr-left">
-            <div className="sec-dot" style={{background:'var(--green)'}}></div>
-            <span className="sec-title" style={{color:'var(--green)'}}>今日會議</span>
-          </div>
-          <span className="sec-count">{meetings.length} 場</span>
-        </div>
-      </div>
-      {meetings.map((m, i) => {
-        const over = isMeetingOver(m);
-        const st = (m.startUTC ? utcToLocalTime(m.startUTC) : m.startTime) || m.startTime;
-        const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
-        return (
-          <div key={i} style={{
-            background: over ? '#f8f8f8' : '#fff',
-            padding:'10px 16px', borderBottom:'0.5px solid #f2f2f2',
-            display:'flex', alignItems:'center', gap:9,
-          }}>
-            <div style={{
-              width:8, height:8, borderRadius:'50%', flexShrink:0,
-              background: over ? '#ddd' : '#1D9E75',
-            }}/>
-            <span style={{
-              fontSize:12, width:74, flexShrink:0, whiteSpace:'nowrap',
-              color: over ? '#ccc' : '#555', fontWeight: over ? 400 : 500,
-              textDecoration: over ? 'line-through' : 'none',
-            }}>{st}{et?'–'+et:''}</span>
-            <span style={{
-              flex:1, fontSize:14,
-              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
-              color: over ? '#bbb' : '#1a1a1a',
-              fontWeight: over ? 400 : 600,
-              textDecoration: over ? 'line-through' : 'none',
-            }}>{m.title}</span>
-          </div>
-        );
-      })}
-      {meetings.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>今日無會議</div>}
-
-      <div style={{background:'var(--blue-bg)',marginTop:4}}>
-        <div className="sec-hdr">
-          <div className="sec-hdr-left">
-            <div className="sec-dot" style={{background:'var(--blue)'}}></div>
-            <span className="sec-title" style={{color:'var(--blue)'}}>工作任務</span>
-          </div>
-          <span className="sec-count">{tasks.length} 項</span>
-        </div>
-      </div>
-      {tasks.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
-      {tasks.length === 0 && <div className="empty" style={{padding:'16px',fontSize:13,color:'#bbb'}}>無進行中任務</div>}
+          ))
+      }
+      <div style={{height:8}}/>
     </div>
   );
 };
@@ -631,12 +800,58 @@ const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
 // ════════════════════════════════════════════════════
 // ⑦ TASK FORM PAGE (新增 / 編輯)
 // ════════════════════════════════════════════════════
-const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
-  const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr() };
+const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultCategory = '工作' }) => {
+  const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr(), category: defaultCategory };
   const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
+  const [allNotes] = useState(() => getNotes());
+  const relatedNotes = useMemo(
+    () => matchNotes(allNotes, form.title, form.category),
+    [allNotes, form.title, form.category]
+  );
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleAIAnalyze = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const key = localStorage.getItem('gemini_key') || '';
+    if (!key) { alert('請先點右上角 ⚙ 設定 Gemini API Key'); e.target.value=''; return; }
+    setAnalyzing(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        try {
+          const base64 = ev.target.result.split(',')[1];
+          const result = await analyzeWithGemini(base64, file.type||'image/jpeg');
+          if (mode === 'add') {
+            setForm(f => ({
+              ...f,
+              priority: result.priority || f.priority,
+              title:    result.title    || f.title,
+              owner:    result.owner    || f.owner,
+              dueDate:  result.dueDate  || f.dueDate,
+              category: result.category || f.category,
+              progress: result.progress || f.progress,
+            }));
+          } else {
+            // 編輯模式：追加進度，獨立段落 + 日期標記
+            const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+            const entry = `[${dateStr} AI更新]\n${result.progress}`;
+            setForm(f => ({ ...f, progress: f.progress ? f.progress + '\n\n' + entry : entry }));
+          }
+        } catch(err) {
+          if (err.message==='NOKEY') alert('請先設定 Gemini API Key');
+          else alert('AI 分析失敗：' + err.message);
+        }
+        setAnalyzing(false);
+      };
+      reader.readAsDataURL(file);
+    } catch(err) { alert('讀取圖片失敗'); setAnalyzing(false); }
+    e.target.value = '';
+  };
 
   const handleSave = async () => {
     if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
@@ -646,80 +861,114 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
   };
 
   return (
-    <div style={{height:'100vh', display:'flex', flexDirection:'column', background:'var(--bg)', overflow:'hidden'}}>
-
-      {/* ── 固定 Header ── */}
-      <div className="page-hdr" style={{flexShrink:0}}>
+    <div className="form-wrap">
+      <div className="page-hdr">
         <span className="back-btn" onClick={onBack}>‹</span>
         <span className="page-hdr-title">{mode === 'add' ? '新增任務' : '編輯任務'}</span>
         <span></span>
       </div>
 
-      {/* ── 可捲動中間區 ── */}
-      <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', gap:0}}>
-
-        {/* 上半：固定欄位（不滑動） */}
-        <div style={{flexShrink:0, background:'var(--card)', borderBottom:'0.5px solid var(--border)'}}>
-          <div className="form-row">
-            <span className="f-label">優先等級</span>
-            <select value={form.priority} onChange={e => set('priority', e.target.value)}>
-              <option value="P1">P1 極急</option>
-              <option value="P2">P2 重要</option>
-              <option value="P3">P3 一般</option>
-              <option value="P4">P4 備忘</option>
-            </select>
-          </div>
-          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
-            <span className="f-label">追蹤事項</span>
-            <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
-          </div>
+      {/* AI 快速填入（新增模式）*/}
+      {mode === 'add' && (
+        <div style={{padding:'12px 16px 8px',background:'var(--card)',marginBottom:8}}>
+          <label className="ai-fill-btn" style={{opacity:analyzing?0.6:1}}>
+            <span>{analyzing?'🤖':'📷'}</span>
+            <span>{analyzing?'AI 分析中...':'AI 快速填入（拍照 / 截圖 Email）'}</span>
+            <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing} onChange={handleAIAnalyze}/>
+          </label>
+          <div style={{fontSize:11,color:'#bbb',textAlign:'center',marginTop:5}}>拍 Email 或文件截圖，AI 自動填寫所有欄位</div>
         </div>
+      )}
 
-        <div style={{flexShrink:0, background:'var(--card)', borderBottom:'0.5px solid var(--border)', marginTop:8}}>
-          <div className="form-row">
-            <span className="f-label">負責人</span>
-            <select value={form.owner} onChange={e => set('owner', e.target.value)}>
-              <option value="">— 選擇 —</option>
-              {members.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+      {/* 相關筆記提醒 */}
+      {relatedNotes.length > 0 && (
+        <div className="note-reminder-bar" style={{marginBottom:8}}>
+          <div onClick={() => setNoteExpanded(e=>!e)}
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}}>
+            <span style={{fontSize:12,fontWeight:600,color:'#5B3EA0'}}>
+              💡 相關筆記提醒（{relatedNotes.length} 條）
+            </span>
+            <span style={{fontSize:14,color:'#667eea'}}>{noteExpanded?'∧':'∨'}</span>
           </div>
-          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
-            <span className="f-label">預定完成日</span>
-            <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
-          </div>
-          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
-            <span className="f-label">實際完成日</span>
-            <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
-          </div>
-          <div className="form-row" style={{borderTop:'0.5px solid #f7f7f7'}}>
-            <span className="f-label">立案日期</span>
-            <input type="date" value={form.createdDate || todayStr()} onChange={e => set('createdDate', e.target.value)} />
-          </div>
+          {noteExpanded && relatedNotes.map((n,i) => (
+            <div key={n.id} style={{marginTop:8,paddingTop:8,borderTop:'0.5px solid #D4CCFF'}}>
+              {n.category && <div style={{fontSize:10,color:'#667eea',fontWeight:600,marginBottom:2}}>{n.category}</div>}
+              <div style={{fontSize:12,fontWeight:500,color:'#1a1a1a',marginBottom:n.points?4:0}}>{n.conclusion}</div>
+              {n.points && <div style={{fontSize:11,color:'#555',lineHeight:1.7,whiteSpace:'pre-wrap'}}>{n.points}</div>}
+            </div>
+          ))}
         </div>
+      )}
 
-        {/* 下半：彈性文字區（處理過程 flex:1，結案心得固定小） */}
-        <div style={{flex:1, display:'flex', flexDirection:'column', marginTop:8, minHeight:0}}>
-
-          {/* 處理過程履歷：佔剩餘大部分空間 */}
-          <div style={{
-            flex:1, display:'flex', flexDirection:'column',
-            background:'var(--card)', minHeight:0,
-          }}>
-            <div style={{
-              padding:'10px 16px 6px',
-              display:'flex', alignItems:'center', justifyContent:'space-between',
-              flexShrink:0,
-            }}>
-              <span style={{fontSize:12, color:'var(--text-muted)', fontWeight:500}}>處理過程履歷</span>
-              <label style={{
-                display:'flex', alignItems:'center', gap:5, cursor:'pointer',
-                background:'#EBF3FA', color:'#185FA5', borderRadius:6,
-                padding:'4px 10px', fontSize:12, fontWeight:500,
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">類別</span>
+          <div style={{display:'flex',gap:8,flex:1}}>
+            {['工作','生活'].map(cat => (
+              <button key={cat} onClick={() => set('category', cat)} style={{
+                flex:1, padding:'6px 0', borderRadius:7,
+                border: form.category===cat ? 'none' : '0.5px solid var(--border)',
+                background: form.category===cat ? (cat==='工作'?'#185FA5':'#3B6D11') : '#fff',
+                color: form.category===cat ? '#fff' : 'var(--text-muted)',
+                fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'inherit',
               }}>
-                {uploading ? '上傳中...' : '📷 截圖'}
-                <input
-                  type="file" accept="image/*" style={{display:'none'}}
-                  disabled={uploading}
+                {cat==='工作'?'💼 工作':'🏠 生活'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="form-row">
+          <span className="f-label">優先等級</span>
+          <select value={form.priority} onChange={e => set('priority', e.target.value)}>
+            <option value="P1">P1 極急</option>
+            <option value="P2">P2 重要</option>
+            <option value="P3">P3 一般</option>
+            <option value="P4">P4 備忘</option>
+          </select>
+        </div>
+        <div className="form-row">
+          <span className="f-label">追蹤事項</span>
+          <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">負責人</span>
+          <select value={form.owner} onChange={e => set('owner', e.target.value)}>
+            <option value="">— 選擇 —</option>
+            {members.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="form-row">
+          <span className="f-label">預定完成日</span>
+          <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+        </div>
+        <div className="form-row">
+          <span className="f-label">實際完成日</span>
+          <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+            <label style={{marginBottom:0}}>處理過程履歷</label>
+            <div style={{display:'flex',gap:6}}>
+              {/* AI 追加進度（編輯模式）*/}
+              {mode === 'edit' && (
+                <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}>
+                  {analyzing?'🤖 分析中...':'🤖 AI追加進度'}
+                  <input type="file" accept="image/*" capture="environment" style={{display:'none'}} disabled={analyzing} onChange={handleAIAnalyze}/>
+                </label>
+              )}
+              <label style={{
+                display:'flex',alignItems:'center',gap:4,cursor:'pointer',
+                background:'#EBF3FA',color:'#185FA5',borderRadius:6,
+                padding:'4px 9px',fontSize:11,fontWeight:500,
+              }}>
+                {uploading?'上傳中...':'📷 截圖'}
+                <input type="file" accept="image/*" style={{display:'none'}} disabled={uploading}
                   onChange={async e => {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -729,71 +978,60 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add' }) => {
                       reader.onload = async ev => {
                         try {
                           const base64 = ev.target.result.split(',')[1];
-                          const res = await api.uploadImage(base64, file.name, form.id || 'new');
+                          const res = await api.uploadImage(base64, file.name, form.id||'new');
                           if (res.ok) {
-                            const timestamp = new Date().toLocaleDateString('zh-TW');
-                            const link = `\n[📷 截圖 ${timestamp}](${res.driveUrl})`;
-                            set('progress', (form.progress || '') + link);
-                          } else {
-                            alert('上傳失敗：' + (res.error || '未知錯誤'));
-                          }
-                        } catch(err) { alert('上傳失敗：' + err.message); }
+                            const ts = new Date().toLocaleDateString('zh-TW');
+                            set('progress', (form.progress||'') + `\n[📷 截圖 ${ts}](${res.driveUrl})`);
+                          } else { alert('上傳失敗：'+(res.error||'未知')); }
+                        } catch(err) { alert('上傳失敗：'+err.message); }
                         setUploading(false);
                       };
                       reader.readAsDataURL(file);
-                    } catch(err) { alert('讀取圖片失敗'); setUploading(false); }
-                    e.target.value = '';
+                    } catch(err) { alert('讀取失敗'); setUploading(false); }
+                    e.target.value='';
                   }}
                 />
               </label>
             </div>
-            <textarea
-              placeholder="記錄處理過程（可換行輸入）..."
-              value={form.progress}
-              onChange={e => set('progress', e.target.value)}
-              style={{
-                flex:1, padding:'0 16px 8px',
-                border:'none', outline:'none', fontSize:14,
-                background:'transparent', color:'var(--text)',
-                fontFamily:'inherit', resize:'none', lineHeight:1.7,
-              }}
-            />
           </div>
-
-          {/* 結案心得：固定小區塊，borderTop 分隔 */}
-          <div style={{
-            flexShrink:0, background:'var(--card)',
-            borderTop:'0.5px solid var(--border)',
-          }}>
-            <div style={{padding:'8px 16px 4px', fontSize:12, color:'var(--text-muted)', fontWeight:500}}>結案心得</div>
-            <textarea
-              placeholder="結案後的心得..."
-              value={form.reflection}
-              rows={2}
-              onChange={e => set('reflection', e.target.value)}
-              style={{
-                width:'100%', padding:'0 16px 8px',
-                border:'none', outline:'none', fontSize:14,
-                background:'transparent', color:'var(--text)',
-                fontFamily:'inherit', resize:'none', lineHeight:1.7,
-                display:'block',
-              }}
-            />
-          </div>
-
+          <textarea
+            placeholder="記錄處理過程（可換行輸入）..."
+            value={form.progress} rows={6}
+            onChange={e => set('progress', e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',
+              color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}
+          />
+          {form.progress && form.progress.includes('drive.google.com') && (
+            <div style={{marginTop:6,fontSize:12,color:'#185FA5'}}>💡 長按連結可在瀏覽器開啟截圖</div>
+          )}
         </div>
       </div>
 
-      {/* ── 固定底部按鈕 ── */}
-      <div className="btn-row" style={{flexShrink:0, paddingBottom:'calc(16px + env(safe-area-inset-bottom, 0px))'}}>
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>結案心得</label>
+          <textarea placeholder="結案後的心得與改善方向..." value={form.reflection} rows={3}
+            onChange={e => set('reflection', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">立案日期</span>
+          <input type="date" value={form.createdDate||todayStr()} onChange={e => set('createdDate', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="btn-row">
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? '儲存中...' : '存檔'}
+          {saving?'儲存中...':'存檔'}
         </button>
         <button className="btn btn-secondary" onClick={onBack}>取消</button>
       </div>
     </div>
   );
 };
+
 
 // ════════════════════════════════════════════════════
 // ⑧ TASK DETAIL PAGE
@@ -925,23 +1163,41 @@ const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed, onDelete, is
 // ════════════════════════════════════════════════════
 // ⑨ TASKS PAGE
 // ════════════════════════════════════════════════════
-const TasksPage = ({ tasks, onTaskClick }) => (
-  <div>
-    {tasks.length === 0 && <div className="empty">無進行中任務 🎉</div>}
-    {tasks.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
-  </div>
-);
+const TasksPage = ({ tasks, onTaskClick, onAddTask }) => {
+  const [catTab, setCatTab] = useState('工作');
+  const filtered = sortByPriority(tasks.filter(t => (t.category||'工作') === catTab));
+  return (
+    <div>
+      <div className="cat-tab-bar">
+        {['工作','生活'].map(cat => (
+          <button key={cat} className={`cat-tab-btn${catTab===cat?' active':''}`} onClick={() => setCatTab(cat)}>
+            {cat==='工作'?'💼 工作':'🏠 生活'}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 && <div className="empty">無進行中{catTab}任務 🎉</div>}
+      {filtered.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
+      <div className="fab" onClick={() => onAddTask(catTab)}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+          <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
+        </svg>
+      </div>
+    </div>
+  );
+};
 
 // ════════════════════════════════════════════════════
 // ⑩ HISTORY PAGE
 // ════════════════════════════════════════════════════
 const HistoryPage = ({ history, onItemClick }) => {
   const [query, setQuery] = useState('');
+  const [catTab, setCatTab] = useState('工作');
 
   const filtered = history.filter(t => {
+    if ((t.category||'工作') !== catTab) return false;
     if (!query) return true;
     const q = query.toLowerCase();
-    return (t.title || '').toLowerCase().includes(q) || (t.owner || '').toLowerCase().includes(q);
+    return (t.title||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q);
   });
 
   const grouped = {};
@@ -954,6 +1210,13 @@ const HistoryPage = ({ history, onItemClick }) => {
 
   return (
     <div>
+      <div className="cat-tab-bar">
+        {['工作','生活'].map(cat => (
+          <button key={cat} className={`cat-tab-btn${catTab===cat?' active':''}`} onClick={() => setCatTab(cat)}>
+            {cat==='工作'?'💼 工作':'🏠 生活'}
+          </button>
+        ))}
+      </div>
       <div className="h-search">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
           <circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/>
@@ -1027,7 +1290,214 @@ const SetupScreen = ({ onSave }) => {
 };
 
 // ════════════════════════════════════════════════════
-// ⑫ MAIN APP
+// ⑫ SETTINGS PAGE
+// ════════════════════════════════════════════════════
+const SettingsPage = ({ onBack }) => {
+  const [key, setKey] = useState(localStorage.getItem('gemini_key') || '');
+  const [saved, setSaved] = useState(false);
+  const handleSave = () => {
+    localStorage.setItem('gemini_key', key.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  return (
+    <div style={{background:'var(--bg)',minHeight:'100%',paddingBottom:'calc(40px + env(safe-area-inset-bottom,0px))'}}>
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">設定</span>
+        <span></span>
+      </div>
+      <div style={{background:'var(--card)',marginBottom:8}}>
+        <div style={{padding:'16px'}}>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:4}}>🤖 Gemini AI — API Key</div>
+          <div style={{fontSize:12,color:'#bbb',marginBottom:12,lineHeight:1.8}}>
+            免費取得：前往 <span style={{color:'var(--blue)'}}>aistudio.google.com</span><br/>
+            登入 Google 帳號 → Get API Key → 複製貼上<br/>
+            <span style={{fontSize:11}}>Key 僅存於本機，不會上傳至伺服器</span>
+          </div>
+          <input className="settings-key-input" type="password" placeholder="AIza..." value={key} onChange={e => setKey(e.target.value)} />
+        </div>
+        <div style={{padding:'0 16px 16px'}}>
+          <button className="btn btn-primary" style={{width:'100%'}} onClick={handleSave}>
+            {saved ? '✓ 已儲存' : '儲存 API Key'}
+          </button>
+        </div>
+      </div>
+      <div style={{background:'var(--card)'}}>
+        <div style={{padding:'14px 16px'}}>
+          <div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.0</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑭ NOTE FORM PAGE
+// ════════════════════════════════════════════════════
+const NoteFormPage = ({ initial, onBack, onSave }) => {
+  const blank = { id:'', category:'', conclusion:'', detail:'', points:'', tags:'', createdDate: todayStr() };
+  const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSave = () => {
+    if (!form.conclusion.trim()) { alert('請填入結論'); return; }
+    const notes = getNotes();
+    if (form.id) {
+      const idx = notes.findIndex(n => n.id === form.id);
+      if (idx >= 0) notes[idx] = form; else notes.unshift(form);
+    } else {
+      notes.unshift({ ...form, id: 'N' + Date.now() });
+    }
+    saveNotes(notes);
+    onSave(notes);
+  };
+
+  return (
+    <div className="form-wrap">
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">{form.id ? '編輯筆記' : '新增學習筆記'}</span>
+        <span></span>
+      </div>
+
+      <div style={{background:'#F3F0FF',padding:'10px 16px',fontSize:12,color:'#5B3EA0',lineHeight:1.8,marginBottom:8}}>
+        📐 <strong>結論先行</strong>：先寫最重要的結論<br/>
+        🌳 <strong>見林再見樹</strong>：先說大局影響，再列細節
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">類別</span>
+          <input type="text" placeholder="客戶管理 / 報表 / 談判 / 溝通..." value={form.category} onChange={e=>set('category',e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>🎯 結論（必填，一句話）</label>
+          <textarea placeholder="最重要的結論，結論先行..." value={form.conclusion} rows={2}
+            onChange={e=>set('conclusion',e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>🌳 背景說明（見林：整體影響與大局）</label>
+          <textarea placeholder="為什麼這個結論重要？影響是什麼？" value={form.detail} rows={3}
+            onChange={e=>set('detail',e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>🌿 注意事項（見樹：條列細節）</label>
+          <textarea placeholder="• 細節一&#10;• 細節二&#10;• 細節三" value={form.points} rows={5}
+            onChange={e=>set('points',e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">提醒標籤</span>
+          <input type="text" placeholder="Cliff, KOE, 報告（逗號分隔）" value={form.tags} onChange={e=>set('tags',e.target.value)} />
+        </div>
+        <div style={{padding:'2px 16px 10px',fontSize:11,color:'#bbb'}}>
+          新增任務時，標題含這些關鍵字即自動彈出提醒
+        </div>
+      </div>
+
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={handleSave}>存檔</button>
+        <button className="btn btn-secondary" onClick={onBack}>取消</button>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑮ NOTES LIST PAGE
+// ════════════════════════════════════════════════════
+const NotesListPage = ({ notes, onBack, onAdd, onEdit, onDelete }) => {
+  const [expanded, setExpanded] = useState(null);
+  const [query, setQuery] = useState('');
+
+  const filtered = notes.filter(n => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (n.conclusion||'').toLowerCase().includes(q)
+      || (n.category||'').toLowerCase().includes(q)
+      || (n.tags||'').toLowerCase().includes(q);
+  });
+
+  return (
+    <div style={{background:'var(--bg)',minHeight:'100%',paddingBottom:40}}>
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">學習筆記</span>
+        <span className="hdr-action" onClick={onAdd}>＋ 新增</span>
+      </div>
+
+      <div style={{background:'#F3F0FF',padding:'8px 16px',fontSize:11,color:'#5B3EA0',lineHeight:1.7}}>
+        底層邏輯：<strong>結論先行</strong> ✦ <strong>見林再見樹</strong>
+      </div>
+
+      <div className="h-search" style={{margin:'8px 14px'}}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/>
+          <line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input placeholder="搜尋筆記..." value={query} onChange={e=>setQuery(e.target.value)}/>
+        {query && <span onClick={()=>setQuery('')} style={{cursor:'pointer',color:'#bbb',fontSize:20,lineHeight:1}}>×</span>}
+      </div>
+
+      {filtered.length === 0 && <div className="empty">
+        {notes.length===0 ? '尚無學習筆記' : '查無結果'}
+      </div>}
+
+      {filtered.map((n, i) => (
+        <div key={n.id}>
+          <div className="note-list-item" onClick={() => setExpanded(expanded===i?null:i)}>
+            <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
+              <div style={{flex:1}}>
+                {n.category && <div className="note-cat-tag">{n.category}</div>}
+                <div className="note-conclusion-text">{n.conclusion}</div>
+                {n.tags && <div className="note-tags-text">🏷 {n.tags}</div>}
+              </div>
+              <span style={{fontSize:16,color:'#bbb',flexShrink:0,paddingTop:2}}>{expanded===i?'∨':'›'}</span>
+            </div>
+          </div>
+          {expanded === i && (
+            <div className="note-detail-wrap">
+              {n.detail && (
+                <div style={{marginBottom:8}}>
+                  <div style={{fontSize:11,color:'#667eea',fontWeight:600,marginBottom:3}}>🌳 背景說明</div>
+                  <div style={{fontSize:13,color:'#555',lineHeight:1.7}}>{n.detail}</div>
+                </div>
+              )}
+              {n.points && (
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:11,color:'#667eea',fontWeight:600,marginBottom:3}}>🌿 注意事項</div>
+                  <div style={{fontSize:13,color:'#555',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{n.points}</div>
+                </div>
+              )}
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button className="btn btn-edit" style={{fontSize:12,padding:'6px 14px',flex:1}} onClick={()=>onEdit(n)}>編輯</button>
+                <button className="btn btn-secondary" style={{fontSize:12,padding:'6px 14px',flex:1}} onClick={()=>onDelete(n.id)}>刪除</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑬ MAIN APP
 // ════════════════════════════════════════════════════
 const TAB_ICONS = {
   dashboard: (
@@ -1073,6 +1543,9 @@ const App = () => {
   const [view, setView] = useState('list'); // 'list' | 'add' | 'detail' | 'historyDetail'
   const [selectedTask, setSelectedTask] = useState(null);
   const [toast, setToast] = useState('');
+  const [defaultCat, setDefaultCat] = useState('工作');
+  const [notes, setNotes] = useState(() => getNotes());
+  const [selectedNote, setSelectedNote] = useState(null);
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 4000); };
 
@@ -1094,8 +1567,6 @@ const App = () => {
         if (ct) setTasks(JSON.parse(ct));
         if (cm) setMembers(JSON.parse(cm));
         if (cmt) setMeetings(JSON.parse(cmt));
-        const ch = localStorage.getItem('cache_history');
-        if (ch) setHistory(JSON.parse(ch));
       } catch(e) {}
     }
 
@@ -1108,7 +1579,7 @@ const App = () => {
       try {
         showToast(`⟳ 連線中 (${attempt}/${maxTries})...`);
         const res = await api.get('getAll', { date: todayStr() });
-        const sorted = (res.tasks || []).sort((a,b) => new Date(a.dueDate||'9999') - new Date(b.dueDate||'9999'));
+        const sorted = sortByPriority(res.tasks || []);
         setTasks(sorted);
         if (res.members && res.members.length > 0) setMembers(res.members);
         try {
@@ -1138,13 +1609,8 @@ const App = () => {
   const loadHistory = async () => {
     try {
       const h = await api.getHistory();
-      const list = h.history || [];
-      setHistory(list);
-      try { localStorage.setItem('cache_history', JSON.stringify(list)); } catch(e) {}
-    } catch(e) {
-      // 載入失敗時顯示快取（已在 loadAll 初始化時讀入），提示使用者
-      showToast('⚠ 歷史紀錄載入失敗，顯示快取');
-    }
+      setHistory(h.history || []);
+    } catch(e) { /* 歷史紀錄載入失敗不影響主功能 */ }
   };
 
   const loadMeetings = async () => {
@@ -1168,7 +1634,7 @@ const App = () => {
     try {
       await api.addTask(newTask);
       // 新增成功後重新從 Sheets 取得，確保同步
-      setTasks(prev => [...prev, newTask].sort((a,b) => new Date(a.dueDate||'9999')-new Date(b.dueDate||'9999')));
+      setTasks(prev => sortByPriority([...prev, newTask]));
       setView('list');
       showToast('✓ 任務已新增');
       // 背景重新同步確認
@@ -1176,7 +1642,7 @@ const App = () => {
         try {
           const res = await api.getTasks();
           if (res.tasks) {
-            const sorted = res.tasks.sort((a,b) => new Date(a.dueDate||'9999')-new Date(b.dueDate||'9999'));
+            const sorted = sortByPriority(res.tasks);
             setTasks(sorted);
           }
         } catch(e) {}
@@ -1188,7 +1654,7 @@ const App = () => {
   };
 
   const handleSavedTask = (id, data) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+    setTasks(prev => sortByPriority(prev.map(t => t.id === id ? { ...t, ...data } : t)));
     showToast('✓ 已更新');
   };
 
@@ -1220,17 +1686,35 @@ const App = () => {
   };
 
   // ── Render overlay views ──
-  // GAS URL 已內建，不顯示設定畫面
-  // 設定畫面已停用：GAS 網址內建於程式碼中
-
   const pageWrap = content => (
-    <div style={{height:'100vh', overflowY:'auto', WebkitOverflowScrolling:'touch', background:'var(--bg)'}}>
+    <div style={{height:'100vh',overflowY:'auto',WebkitOverflowScrolling:'touch',background:'var(--bg)'}}>
       {content}
     </div>
   );
 
+  if (view === 'settings') return pageWrap(<SettingsPage onBack={() => setView('list')} />);
+  if (view === 'notesList') return pageWrap(
+    <NotesListPage
+      notes={notes}
+      onBack={() => setView('list')}
+      onAdd={() => { setSelectedNote(null); setView('noteForm'); }}
+      onEdit={n => { setSelectedNote(n); setView('noteForm'); }}
+      onDelete={id => {
+        if (!window.confirm('確定刪除此筆記？')) return;
+        const updated = notes.filter(n => n.id !== id);
+        saveNotes(updated); setNotes(updated);
+      }}
+    />
+  );
+  if (view === 'noteForm') return pageWrap(
+    <NoteFormPage
+      initial={selectedNote}
+      onBack={() => setView(selectedNote ? 'notesList' : 'list')}
+      onSave={updated => { setNotes(updated); setView('notesList'); }}
+    />
+  );
   if (view === 'add') return pageWrap(
-    <TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" />
+    <TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" defaultCategory={defaultCat} />
   );
   if (view === 'detail' && selectedTask) return pageWrap(
     <TaskDetailPage
@@ -1255,10 +1739,10 @@ const App = () => {
   const renderContent = () => {
     if (loading) return <div className="spinner" style={{flexDirection:"column",gap:12}}><div style={{fontSize:28}}>⟳</div><div>載入中，首次約需 5-10 秒...</div></div>;
     switch (tab) {
-      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
+      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onSettings={()=>setView('settings')} notes={notes} onViewNotes={()=>setView('notesList')} onAddNote={()=>{setSelectedNote(null);setView('noteForm');}} />;
       case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading} />;
-      case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t => { setSelectedTask(t); setView('detail'); }} />;
-      case 'history': return <HistoryPage history={history} onItemClick={t => { setSelectedTask(t); setView('historyDetail'); }} />;
+      case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onAddTask={cat=>{setDefaultCat(cat);setView('add');}} />;
+      case 'history': return <HistoryPage history={history} onItemClick={t=>{setSelectedTask(t);setView('historyDetail');}} />;
     }
   };
 
@@ -1266,14 +1750,6 @@ const App = () => {
     <>
       <div style={{height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div className="scroll-area">{renderContent()}</div>
-
-        {tab === 'tasks' && (
-          <div className="fab" onClick={() => setView('add')}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-              <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
-            </svg>
-          </div>
-        )}
 
         <div className="tab-bar">
           {[
