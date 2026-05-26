@@ -543,7 +543,41 @@ const api = {
   uploadImage:   (base64, filename, taskId) => api.post({ action:'uploadImage', base64, filename, taskId }),
 };
 
-// ── 學習筆記 工具函式 ─────────────────────────────────────────
+// ── Gemini 純文字分析（HTML / EML 用）────────────────────────
+const analyzeTextWithGemini = async (emailText, key) => {
+  const today = todayStr();
+  const prompt = `你是專業工作助理，分析以下Email內容，今天日期是${today}。
+【重要】無論Email是英文、中文或其他語言，所有輸出內容一律使用繁體中文。
+只回傳JSON格式（不含markdown）：
+{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
+
+【重點摘要原則 - 全面性優先】
+- progress條列所有重要資訊，寧可多點也不能漏掉關鍵細節，最多10點
+- 包含：任務背景、要求內容、關係人、數字/日期、注意事項
+
+【next_step - 結論先行 + 見林再見樹】
+- 最關鍵的一個行動，動詞開頭，20字內
+
+【優先等級判斷】
+- 寄件人/交辦人是Cliff → P1（無例外）
+- 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
+
+以下是Email內容：
+---
+${emailText}`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    }
+  );
+  if (!res.ok) throw new Error('Gemini API 錯誤 ' + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+};
 const getNotes = () => {
   try { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); }
   catch(e) { return []; }
@@ -817,42 +851,76 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   );
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  // ── 核心：處理圖片（按鈕 / 貼上 / 拖曳共用）──
+  // ── 核心：處理圖片/PDF/HTML（按鈕 / 貼上 / 拖曳共用）──
   const processFile = useCallback(async (file) => {
     const key = localStorage.getItem('gemini_key') || '';
     if (!key) { alert('請先點右上角 ⚙ 設定 Gemini API Key'); return; }
+
+    const isHTML = file.type === 'text/html' || file.type === 'message/rfc822'
+      || /\.(html?|mht|eml)$/i.test(file.name);
+
     setAnalyzing(true);
+
+    if (isHTML) {
+      // HTML/MHT/EML → 擷取純文字 → 傳給 Gemini 做文字分析
+      try {
+        const rawText = await file.text();
+        const clean = rawText
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/\s{2,}/g, '\n').trim()
+          .slice(0, 8000); // Gemini token 限制
+
+        const result = await analyzeTextWithGemini(clean, key);
+        applyAIResult(result);
+      } catch(err) {
+        alert('Email 分析失敗：' + err.message);
+      }
+      setAnalyzing(false);
+      return;
+    }
+
+    // 圖片 / PDF → 原本的 base64 inlineData 方式
     const reader = new FileReader();
     reader.onload = async ev => {
       try {
         const base64 = ev.target.result.split(',')[1];
         const result = await analyzeWithGemini(base64, file.type || 'image/jpeg');
-        if (mode === 'add') {
-          setForm(f => ({
-            ...f,
-            priority:  result.priority  || f.priority,
-            title:     result.title     || f.title,
-            owner:     result.owner     || f.owner,
-            dueDate:   result.dueDate   || f.dueDate,
-            category:  result.category  || f.category,
-            progress:  result.progress  || f.progress,
-            next_step: result.next_step || f.next_step,
-          }));
-        } else {
-          const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
-          const entry = `[${dateStr} AI更新]\n${result.progress}`;
-          setForm(f => ({
-            ...f,
-            progress:  f.progress ? f.progress + '\n\n' + entry : entry,
-            next_step: result.next_step || f.next_step,
-          }));
-        }
+        applyAIResult(result);
       } catch(err) {
         alert(err.message === 'NOKEY' ? '請先設定 Gemini API Key' : 'AI 分析失敗：' + err.message);
       }
       setAnalyzing(false);
     };
     reader.readAsDataURL(file);
+  }, [mode, form.progress]);
+
+  // AI 結果套用（新增模式 vs 編輯追加）
+  const applyAIResult = useCallback((result) => {
+    if (mode === 'add') {
+      setForm(f => ({
+        ...f,
+        priority:  result.priority  || f.priority,
+        title:     result.title     || f.title,
+        owner:     result.owner     || f.owner,
+        dueDate:   result.dueDate   || f.dueDate,
+        category:  result.category  || f.category,
+        progress:  result.progress  || f.progress,
+        next_step: result.next_step || f.next_step,
+      }));
+    } else {
+      const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+      const entry = `[${dateStr} AI更新]\n${result.progress}`;
+      setForm(f => ({
+        ...f,
+        progress:  f.progress ? f.progress + '\n\n' + entry : entry,
+        next_step: result.next_step || f.next_step,
+      }));
+    }
   }, [mode]);
 
   // ── Ctrl+V 貼上 & 拖曳（電腦版）──
@@ -893,11 +961,11 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
           <label className="ai-fill-btn" style={{opacity:analyzing?0.6:1}}>
             <span>{analyzing?'🤖':'📷'}</span>
             <span>{analyzing?'AI 分析中...':'拍照 / 截圖 / PDF → AI 自動填入'}</span>
-            <input type="file" accept="image/*,.pdf" style={{display:'none'}} disabled={analyzing}
+            <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing}
               onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
           </label>
           <div style={{fontSize:11,color:'#bbb',textAlign:'center',marginTop:5}}>
-            電腦：Ctrl+V 截圖 / 拖入圖片或PDF ｜ 手機：拍照或選圖
+            電腦：Ctrl+V 截圖 / 拖入圖片、PDF、HTML ｜ 手機：拍照或選圖
           </div>
         </div>
       )}
@@ -978,7 +1046,7 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
               <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}
                 onDrop={handleDrop} onDragOver={handleDragOver}>
                 {analyzing?'🤖 分析中...':'🤖 AI追加（拍照/貼上）'}
-                <input type="file" accept="image/*,.pdf" style={{display:'none'}} disabled={analyzing}
+                <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing}
                   onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
               </label>
             )}
