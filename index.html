@@ -456,6 +456,7 @@ const analyzeWithGemini = async (base64, mimeType) => {
   if (!key) throw new Error('NOKEY');
   const today = todayStr();
   const prompt = `你是專業工作助理，分析這張圖片，今天日期是${today}。
+【重要】無論圖片是英文、中文或其他語言，所有輸出內容一律使用繁體中文。
 只回傳JSON格式（不含markdown、不含其他文字）：
 {"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
 
