@@ -477,7 +477,7 @@ const analyzeWithGemini = async (base64, mimeType) => {
 - 購物/家事/個人/健康 → category為生活`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[
         {inlineData:{mimeType:mimeType||'image/jpeg',data:base64}},
@@ -485,7 +485,7 @@ const analyzeWithGemini = async (base64, mimeType) => {
       ]}]})
     }
   );
-  if (!res.ok) throw new Error('Gemini API 錯誤 ' + res.status);
+  if (!res.ok) { if (res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if (res.status===403) throw new Error('API Key 無效，請至 ⚙ 設定重新輸入'); throw new Error('Gemini 錯誤 ' + res.status); }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -567,18 +567,100 @@ const analyzeTextWithGemini = async (emailText, key) => {
 ${emailText}`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
     }
   );
-  if (!res.ok) throw new Error('Gemini API 錯誤 ' + res.status);
+  if (!res.ok) { if (res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if (res.status===403) throw new Error('API Key 無效，請至 ⚙ 設定重新輸入'); throw new Error('Gemini 錯誤 ' + res.status); }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
-const getNotes = () => {
+
+// ── 共用 AI Prompt ────────────────────────────────────────────
+const buildAIPrompt = (today, forImage = true) => {
+  const src = forImage ? '分析這張圖片/文件' : '分析以下Email文字內容';
+  return `你是專業工作助理，${src}，今天日期是${today}。
+【重要】無論內容是英文、中文或其他語言，所有輸出一律使用繁體中文。
+只回傳JSON格式（不含markdown、不含其他文字）：
+{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
+
+【重點摘要 - 全面性優先：寧多勿漏】
+- progress條列所有重要資訊，最多10點，每點以•開頭
+- 包含：任務背景/要求/關係人/數字/日期/注意事項
+
+【next_step - 結論先行 + 見林再見樹】
+- 最關鍵的一個行動，動詞開頭，20字內
+
+【優先等級判斷】
+- 寄件人/交辦人是Cliff → P1（無例外）
+- 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
+- 購物/家事/個人/健康 → category為生活`;
+};
+
+// ── Claude API（圖片 + PDF）────────────────────────────────────
+const analyzeWithClaude = async (base64, mimeType) => {
+  const key = localStorage.getItem('claude_key') || '';
+  if (!key) throw new Error('未設定 Claude API Key，請至 ⚙ 設定輸入');
+  const today = todayStr();
+  const prompt = buildAIPrompt(today, true);
+  const isPDF = (mimeType === 'application/pdf');
+  const mediaBlock = isPDF
+    ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data:base64 } }
+    : { type:'image',    source:{ type:'base64', media_type: mimeType||'image/jpeg', data:base64 } };
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1024,
+      messages:[{ role:'user', content:[ mediaBlock, { type:'text', text:prompt } ] }],
+    }),
+  });
+  if (!res.ok) {
+    if (res.status===429) throw new Error('Claude 請求過於頻繁，請稍後再試');
+    if (res.status===401) throw new Error('Claude API Key 無效，請至 ⚙ 設定重新輸入');
+    throw new Error('Claude 錯誤 ' + res.status);
+  }
+  const data = await res.json();
+  const text = data.content?.[0]?.text || '';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+};
+
+// ── Claude 純文字分析（HTML / EML）────────────────────────────
+const analyzeTextWithClaude = async (emailText, key) => {
+  const today = todayStr();
+  const prompt = buildAIPrompt(today, false) + '\n\n---\n' + emailText;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1024,
+      messages:[{ role:'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) {
+    if (res.status===429) throw new Error('Claude 請求過於頻繁，請稍後再試');
+    if (res.status===401) throw new Error('Claude API Key 無效，請至 ⚙ 設定重新輸入');
+    throw new Error('Claude 錯誤 ' + res.status);
+  }
+  const data = await res.json();
+  const text = data.content?.[0]?.text || '';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+};
   try { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); }
   catch(e) { return []; }
 };
@@ -862,7 +944,6 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
     setAnalyzing(true);
 
     if (isHTML) {
-      // HTML/MHT/EML → 擷取純文字 → 傳給 Gemini 做文字分析
       try {
         const rawText = await file.text();
         const clean = rawText
@@ -873,9 +954,11 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
           .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
           .replace(/&quot;/g, '"')
           .replace(/\s{2,}/g, '\n').trim()
-          .slice(0, 8000); // Gemini token 限制
-
-        const result = await analyzeTextWithGemini(clean, key);
+          .slice(0, 6000);
+        const engine = localStorage.getItem('ai_engine') || 'gemini';
+        const result = engine === 'claude'
+          ? await analyzeTextWithClaude(clean, localStorage.getItem('claude_key') || '')
+          : await analyzeTextWithGemini(clean, localStorage.getItem('gemini_key') || '');
         applyAIResult(result);
       } catch(err) {
         alert('Email 分析失敗：' + err.message);
@@ -884,15 +967,17 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
       return;
     }
 
-    // 圖片 / PDF → 原本的 base64 inlineData 方式
     const reader = new FileReader();
     reader.onload = async ev => {
       try {
         const base64 = ev.target.result.split(',')[1];
-        const result = await analyzeWithGemini(base64, file.type || 'image/jpeg');
+        const engine = localStorage.getItem('ai_engine') || 'gemini';
+        const result = engine === 'claude'
+          ? await analyzeWithClaude(base64, file.type || 'image/jpeg')
+          : await analyzeWithGemini(base64, file.type || 'image/jpeg');
         applyAIResult(result);
       } catch(err) {
-        alert(err.message === 'NOKEY' ? '請先設定 Gemini API Key' : 'AI 分析失敗：' + err.message);
+        alert(err.message === 'NOKEY' ? '請先在 ⚙ 設定 Gemini API Key' : 'AI 分析失敗：' + err.message);
       }
       setAnalyzing(false);
     };
@@ -1380,12 +1465,15 @@ const SetupScreen = ({ onSave }) => {
 // ⑫ SETTINGS PAGE
 // ════════════════════════════════════════════════════
 const SettingsPage = ({ onBack }) => {
-  const [key, setKey] = useState(localStorage.getItem('gemini_key') || '');
+  const [engine,    setEngine]    = useState(localStorage.getItem('ai_engine')  || 'gemini');
+  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_key') || '');
+  const [claudeKey, setClaudeKey] = useState(localStorage.getItem('claude_key') || '');
   const [saved, setSaved] = useState(false);
   const handleSave = () => {
-    localStorage.setItem('gemini_key', key.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    localStorage.setItem('ai_engine',  engine);
+    localStorage.setItem('gemini_key', geminiKey.trim());
+    localStorage.setItem('claude_key', claudeKey.trim());
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
   return (
     <div style={{background:'var(--bg)',minHeight:'100%',paddingBottom:'calc(40px + env(safe-area-inset-bottom,0px))'}}>
@@ -1395,29 +1483,60 @@ const SettingsPage = ({ onBack }) => {
         <span></span>
       </div>
       <div style={{background:'var(--card)',marginBottom:8}}>
-        <div style={{padding:'16px'}}>
-          <div style={{fontSize:13,fontWeight:500,marginBottom:4}}>🤖 Gemini AI — API Key</div>
-          <div style={{fontSize:12,color:'#bbb',marginBottom:12,lineHeight:1.8}}>
-            免費取得：前往 <span style={{color:'var(--blue)'}}>aistudio.google.com</span><br/>
-            登入 Google 帳號 → Get API Key → 複製貼上<br/>
-            <span style={{fontSize:11}}>Key 僅存於本機，不會上傳至伺服器</span>
+        <div style={{padding:'14px 16px 10px'}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>🤖 AI 分析引擎</div>
+          <div style={{display:'flex',gap:8}}>
+            {[{id:'gemini',label:'Gemini',sub:'免費',color:'#4285F4'},{id:'claude',label:'Claude',sub:'付費更強',color:'#D97706'}].map(e=>(
+              <button key={e.id} onClick={()=>setEngine(e.id)} style={{
+                flex:1,padding:'10px 8px',borderRadius:10,
+                border:engine===e.id?'none':'1px solid var(--border)',
+                background:engine===e.id?e.color:'#fff',
+                color:engine===e.id?'#fff':'var(--text-muted)',
+                cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',
+              }}>
+                <div style={{fontWeight:600,fontSize:14}}>{e.label}</div>
+                <div style={{fontSize:10,marginTop:2,opacity:0.9}}>{e.sub}</div>
+              </button>
+            ))}
           </div>
-          <input className="settings-key-input" type="password" placeholder="AIza..." value={key} onChange={e => setKey(e.target.value)} />
         </div>
-        <div style={{padding:'0 16px 16px'}}>
+      </div>
+      <div style={{background:'var(--card)',marginBottom:8}}>
+        <div style={{padding:'14px 16px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:500}}>Gemini API Key</div>
+            {engine==='gemini'&&<span style={{fontSize:10,background:'#4285F4',color:'#fff',padding:'1px 7px',borderRadius:10}}>使用中</span>}
+          </div>
+          <div style={{fontSize:11,color:'#bbb',marginBottom:8}}>免費：<span style={{color:'var(--blue)'}}>aistudio.google.com</span></div>
+          <input className="settings-key-input" type="password" placeholder="AIza..." value={geminiKey} onChange={e=>setGeminiKey(e.target.value)}/>
+        </div>
+      </div>
+      <div style={{background:'var(--card)',marginBottom:8}}>
+        <div style={{padding:'14px 16px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:500}}>Claude API Key</div>
+            {engine==='claude'&&<span style={{fontSize:10,background:'#D97706',color:'#fff',padding:'1px 7px',borderRadius:10}}>使用中</span>}
+          </div>
+          <div style={{fontSize:11,color:'#bbb',marginBottom:8}}>付費：<span style={{color:'var(--blue)'}}>console.anthropic.com</span></div>
+          <input className="settings-key-input" type="password" placeholder="sk-ant-..." value={claudeKey} onChange={e=>setClaudeKey(e.target.value)}/>
+        </div>
+      </div>
+      <div style={{background:'var(--card)',marginBottom:8}}>
+        <div style={{padding:'14px 16px'}}>
           <button className="btn btn-primary" style={{width:'100%'}} onClick={handleSave}>
-            {saved ? '✓ 已儲存' : '儲存 API Key'}
+            {saved?'✓ 已儲存':'儲存設定'}
           </button>
         </div>
       </div>
       <div style={{background:'var(--card)'}}>
         <div style={{padding:'14px 16px'}}>
-          <div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.0</div>
+          <div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.2　API Key 僅存於本機</div>
         </div>
       </div>
     </div>
   );
 };
+
 
 // ════════════════════════════════════════════════════
 // ⑭ NOTE FORM PAGE
