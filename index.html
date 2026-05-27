@@ -1126,19 +1126,21 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
 
   const analyzeAll = useCallback(async () => {
     if (!pendingImages.length || analyzing) return;
-    const engine = localStorage.getItem('ai_engine')||'gemini';
-    const key = engine==='claude' ? localStorage.getItem('claude_key')||'' : localStorage.getItem('gemini_key')||'';
-    if (!key) { alert(`請先在 ⚙ 設定 ${engine==='claude'?'Claude':'Gemini'} API Key`); return; }
+    const engine = aiEngine;
+    const key = engine === 'claude'
+      ? localStorage.getItem('claude_key') || ''
+      : localStorage.getItem('gemini_key') || '';
+    if (!key) { alert(`請先在 ⚙ 設定 ${engine === 'claude' ? 'Claude' : 'Gemini'} API Key`); return; }
     setAnalyzing(true);
     try {
-      const result = engine==='claude'
+      const result = engine === 'claude'
         ? await analyzeMultipleWithClaude(pendingImages, key)
         : await analyzeMultipleWithGemini(pendingImages, key);
       applyAIResult(result);
       setPendingImages([]);
     } catch(err) { alert('AI 分析失敗：' + err.message); }
     setAnalyzing(false);
-  }, [pendingImages, analyzing, applyAIResult]);
+  }, [pendingImages, analyzing, applyAIResult, aiEngine]);
 
   useEffect(() => {
     const onPaste = (e) => {
@@ -1155,6 +1157,14 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   const handleDrop  = (e) => { e.preventDefault(); setDragging(false); if(!analyzing) Array.from(e.dataTransfer.files).forEach(addToPending); };
   const handleDragOver  = (e) => { e.preventDefault(); setDragging(true); };
   const handleDragLeave = (e) => { if(!e.currentTarget.contains(e.relatedTarget)) setDragging(false); };
+
+  // AI 引擎快速切換（同步 localStorage）
+  const [aiEngine, setAiEngine] = useState(localStorage.getItem('ai_engine') || 'gemini');
+  const toggleEngine = () => {
+    const next = aiEngine === 'gemini' ? 'claude' : 'gemini';
+    setAiEngine(next);
+    localStorage.setItem('ai_engine', next);
+  };
 
   const handleSave = async () => {
     if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
@@ -1184,6 +1194,25 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
       {/* ── 貼圖框（新增模式）── */}
       {mode === 'add' && (
         <div style={{padding:'12px 16px 8px',background:'var(--card)',marginBottom:8}}>
+
+          {/* 引擎切換 */}
+          <div style={{display:'flex',gap:6,marginBottom:10}}>
+            {[
+              {id:'gemini', label:'G Gemini', color:'#4285F4'},
+              {id:'claude', label:'C Claude',  color:'#D97706'},
+            ].map(e => (
+              <button key={e.id} onClick={() => { setAiEngine(e.id); localStorage.setItem('ai_engine', e.id); }}
+                style={{
+                  flex:1, padding:'6px 0', borderRadius:8, fontSize:12, fontWeight:600,
+                  border: aiEngine===e.id ? 'none' : '1px solid var(--border)',
+                  background: aiEngine===e.id ? e.color : '#f7f7f7',
+                  color: aiEngine===e.id ? '#fff' : '#999',
+                  cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
+                }}>
+                {e.label} {aiEngine===e.id ? '✓' : ''}
+              </button>
+            ))}
+          </div>
           {pendingImages.length === 0 ? (
             /* 空白狀態：點擊或拖曳 */
             <div className="paste-zone-empty" onClick={() => pasteInputRef.current?.click()}>
