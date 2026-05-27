@@ -499,11 +499,13 @@ const analyzeWithGemini = async (base64, mimeType) => {
 - 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
 - 購物/家事/個人/健康 → category為生活`;
 
+  const isPDF = (mimeType === 'application/pdf');
+  const imgData = isPDF ? base64 : await resizeB64(base64, mimeType);
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
     { method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[
-        {inlineData:{mimeType:mimeType||'image/jpeg',data:base64}},
+        {inlineData:{mimeType:mimeType||'image/jpeg',data:imgData}},
         {text:prompt}
       ]}]})
     }
@@ -602,13 +604,33 @@ ${emailText}`;
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
 
+// ── 圖片壓縮（解決大圖 404/413 問題）────────────────────────
+const resizeB64 = (base64, type) => new Promise(resolve => {
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1024;
+    const s = Math.min(1, MAX / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * s);
+    c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    resolve(c.toDataURL('image/jpeg', 0.75).split(',')[1]);
+  };
+  img.onerror = () => resolve(base64); // 失敗就用原圖
+  img.src = `data:${type||'image/jpeg'};base64,${base64}`;
+});
+
 // ── 多圖分析（Gemini）────────────────────────────────────────
 const analyzeMultipleWithGemini = async (images, key) => {
   if (!key) throw new Error('NOKEY');
   const today = todayStr();
   const prompt = buildAIPrompt(today, true);
+  // 壓縮所有圖片（手機截圖原始大小約 5-8MB，壓縮到 ~200KB）
+  const compressed = await Promise.all(
+    images.map(img => img.isPDF ? Promise.resolve(img.base64) : resizeB64(img.base64, img.type))
+  );
   const parts = [
-    ...images.map(img => ({inlineData:{mimeType:img.type||'image/jpeg',data:img.base64}})),
+    ...compressed.map((b64, i) => ({inlineData:{mimeType: images[i].isPDF?'application/pdf':'image/jpeg', data:b64}})),
     {text: prompt}
   ];
   const res = await fetch(
@@ -616,7 +638,11 @@ const analyzeMultipleWithGemini = async (images, key) => {
     {method:'POST',headers:{'Content-Type':'application/json'},
      body:JSON.stringify({contents:[{parts}]})}
   );
-  if (!res.ok){if(res.status===429)throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試');throw new Error('Gemini 錯誤 '+res.status);}
+  if (!res.ok){
+    if(res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試');
+    if(res.status===404) throw new Error('Gemini 模型不可用，建議在 ⚙ 切換至 Claude');
+    throw new Error('Gemini 錯誤 '+res.status);
+  }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text||'';
