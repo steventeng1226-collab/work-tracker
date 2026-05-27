@@ -662,7 +662,7 @@ const analyzeMultipleWithClaude = async (images, key) => {
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,
       'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,
+    body:JSON.stringify({model:'claude-3-5-sonnet-20241022',max_tokens:1024,
       messages:[{role:'user',content}]}),
   });
   if (!res.ok){if(res.status===429)throw new Error('Claude 請求過於頻繁，請稍後再試');if(res.status===401)throw new Error('Claude API Key 無效');throw new Error('Claude 錯誤 '+res.status);}
@@ -709,7 +709,7 @@ const analyzeWithClaude = async (base64, mimeType) => {
       'anthropic-dangerous-direct-browser-access':'true',
     },
     body: JSON.stringify({
-      model:'claude-sonnet-4-20250514',
+      model:'claude-3-5-sonnet-20241022',
       max_tokens:1024,
       messages:[{ role:'user', content:[ mediaBlock, { type:'text', text:prompt } ] }],
     }),
@@ -737,7 +737,7 @@ const analyzeTextWithClaude = async (emailText, key) => {
       'anthropic-dangerous-direct-browser-access':'true',
     },
     body: JSON.stringify({
-      model:'claude-sonnet-4-20250514',
+      model:'claude-3-5-sonnet-20241022',
       max_tokens:1024,
       messages:[{ role:'user', content: prompt }],
     }),
