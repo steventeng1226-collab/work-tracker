@@ -669,7 +669,7 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
     if (isHTML) {
       try {
         const rawText = await file.text();
-        const clean = rawText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/\s{2,}/g,'\n').trim().slice(0,6000);
+        const clean = rawText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/\s{2,}/g,'\n').trim().slice(0,10000);
         const engine = localStorage.getItem('ai_engine') || 'gemini';
         const result = engine === 'claude' ? await analyzeTextWithClaude(clean, localStorage.getItem('claude_key')||'') : await analyzeTextWithGemini(clean, localStorage.getItem('gemini_key')||'');
         applyAIResult(result);
@@ -1197,9 +1197,19 @@ const App = () => {
     try {
       const res = await api.getMeetings(todayStr());
       const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
-      setMeetings((res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] })));
-      showToast('✓ 會議已同步');
-    } catch (e) { showToast('⚠ 同步失敗，保留舊資料'); }
+      const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
+      setMeetings(ms);
+      // ★ FIX: 寫入快取（原本只讀不寫）
+      try { localStorage.setItem('cache_meetings_' + todayStr(), JSON.stringify(ms)); } catch(ce) {}
+      showToast(ms.length > 0 ? `✓ 會議已同步（${ms.length} 場）` : '✓ 同步完成（今日無會議）');
+    } catch (e) {
+      // 載入快取作為備援
+      try {
+        const cached = localStorage.getItem('cache_meetings_' + todayStr());
+        if (cached) { setMeetings(JSON.parse(cached)); showToast('⚠ ICS 同步失敗，顯示快取會議'); }
+        else showToast('⚠ 會議同步失敗（請確認 Sheets Settings 的 ICS_URL）');
+      } catch(ce) { showToast('⚠ 會議同步失敗'); }
+    }
     setMeetLoading(false);
   };
 
