@@ -292,7 +292,15 @@ const analyzeWithGemini = async (base64, mimeType) => {
   const isPDF = (mimeType === 'application/pdf');
   const imgData = isPDF ? base64 : await resizeB64(base64, mimeType);
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{inlineData:{mimeType:mimeType||'image/jpeg',data:imgData}},{text:prompt}]}]}) });
-  if (!res.ok) { if (res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if (res.status===403) throw new Error('API Key 無效，請至 ⚙ 設定重新輸入'); throw new Error('Gemini 錯誤 ' + res.status); }
+  if (!res.ok) {
+    let gErr = 'Gemini 錯誤 ' + res.status;
+    try { const e = await res.json(); const d = e.error?.message||'';
+      if (res.status===429) gErr = (d.toLowerCase().includes('quota')||d.toLowerCase().includes('resource')) ? 'Gemini 每日配額已用完，請明天再試或切換 Claude' : 'Gemini 請求過於頻繁，請等 1 分鐘後再試';
+      else if (res.status===403) gErr = 'Gemini API Key 無效，請至 ⚙ 重新輸入';
+      else if (d) gErr = 'Gemini ' + res.status + '：' + d.slice(0,80);
+    } catch(ex) {}
+    throw new Error(gErr);
+  }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -356,7 +364,15 @@ const analyzeTextWithGemini = async (emailText, key) => {
 ---
 ${emailText}`;
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:prompt}]}]}) });
-  if (!res.ok) { if (res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if (res.status===403) throw new Error('API Key 無效，請至 ⚙ 設定重新輸入'); throw new Error('Gemini 錯誤 ' + res.status); }
+  if (!res.ok) {
+    let gErr = 'Gemini 錯誤 ' + res.status;
+    try { const e = await res.json(); const d = e.error?.message||'';
+      if (res.status===429) gErr = (d.toLowerCase().includes('quota')||d.toLowerCase().includes('resource')) ? 'Gemini 每日配額已用完，請明天再試或切換 Claude' : 'Gemini 請求過於頻繁，請等 1 分鐘後再試';
+      else if (res.status===403) gErr = 'Gemini API Key 無效，請至 ⚙ 重新輸入';
+      else if (d) gErr = 'Gemini ' + res.status + '：' + d.slice(0,80);
+    } catch(ex) {}
+    throw new Error(gErr);
+  }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -388,7 +404,16 @@ const analyzeMultipleWithGemini = async (images, key) => {
   const compressed = await Promise.all(images.map(img => img.isPDF ? Promise.resolve(img.base64) : resizeB64(img.base64, img.type)));
   const parts = [...compressed.map((b64, i) => ({inlineData:{mimeType: images[i].isPDF?'application/pdf':'image/jpeg', data:b64}})), {text: prompt}];
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {method:'POST',headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts}]})});
-  if (!res.ok){ if(res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if(res.status===404) throw new Error('Gemini 模型不可用，建議在 ⚙ 切換至 Claude'); throw new Error('Gemini 錯誤 '+res.status); }
+  if (!res.ok) {
+    let gErr = 'Gemini 錯誤 ' + res.status;
+    try { const e = await res.json(); const d = e.error?.message||'';
+      if (res.status===429) gErr = (d.toLowerCase().includes('quota')||d.toLowerCase().includes('resource')) ? 'Gemini 每日配額已用完，請明天再試或切換 Claude' : 'Gemini 請求過於頻繁，請等 1 分鐘後再試';
+      else if (res.status===403) gErr = 'Gemini API Key 無效，請至 ⚙ 重新輸入';
+      else if (res.status===404) gErr = 'Gemini 模型不可用，建議切換至 Claude';
+      else if (d) gErr = 'Gemini ' + res.status + '：' + d.slice(0,80);
+    } catch(ex) {}
+    throw new Error(gErr);
+  }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text||'';
@@ -662,6 +687,24 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   const relatedNotes = useMemo(() => matchNotes(allNotes, form.title, form.category), [allNotes, form.title, form.category]);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const [aiEngine, setAiEngine] = useState(localStorage.getItem('ai_engine') || 'gemini');
+  const [inputMode, setInputMode] = useState('image'); // 'image' | 'text'
+  const [pendingText, setPendingText] = useState('');
+
+  const analyzeText = useCallback(async () => {
+    if (!pendingText.trim() || analyzing) return;
+    const engine = aiEngine;
+    const key = engine === 'claude' ? localStorage.getItem('claude_key')||'' : localStorage.getItem('gemini_key')||'';
+    if (!key) { alert(`請先在 ⚙ 設定 ${engine==='claude'?'Claude':'Gemini'} API Key`); return; }
+    setAnalyzing(true);
+    try {
+      const result = engine === 'claude'
+        ? await analyzeTextWithClaude(pendingText, key)
+        : await analyzeTextWithGemini(pendingText, key);
+      applyAIResult(result);
+      setPendingText('');
+    } catch(err) { alert('AI 分析失敗：' + err.message); }
+    setAnalyzing(false);
+  }, [pendingText, analyzing, applyAIResult, aiEngine]);
 
   const processFile = useCallback(async (file) => {
     const isHTML = file.type === 'text/html' || file.type === 'message/rfc822' || /\.(html?|mht|eml)$/i.test(file.name);
@@ -766,7 +809,44 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
               </button>
             ))}
           </div>
-          {pendingImages.length === 0 ? (
+          {/* 模式切換：圖片 / 文字 */}
+          <div style={{display:'flex',gap:6,marginBottom:10}}>
+            {[{id:'image',label:'📎 圖片/PDF'},{id:'text',label:'📝 文字貼上'}].map(m => (
+              <button key={m.id} onClick={() => setInputMode(m.id)}
+                style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:12,fontWeight:600,
+                  border:inputMode===m.id?'none':'1px solid var(--border)',
+                  background:inputMode===m.id?'#667eea':'#f7f7f7',
+                  color:inputMode===m.id?'#fff':'#999',
+                  cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {inputMode === 'text' ? (
+            /* 文字輸入模式 */
+            <div style={{border:'1px solid #C4B5FD',borderRadius:12,background:'#FAFAFF',padding:12}}>
+              <textarea
+                placeholder="貼入 Email 內容、工作說明、任何文字資料..."
+                value={pendingText}
+                onChange={e => setPendingText(e.target.value)}
+                rows={6}
+                style={{width:'100%',border:'none',outline:'none',fontSize:13,background:'transparent',
+                  color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}
+              />
+              {pendingText.trim() && (
+                <button className="ai-fill-btn" onClick={analyzeText} disabled={analyzing} style={{margin:'8px 0 0'}}>
+                  <span>{analyzing?'🤖':'✨'}</span>
+                  <span>{analyzing?'AI 分析中...':'AI 分析文字'}</span>
+                </button>
+              )}
+              {!pendingText.trim() && (
+                <div style={{fontSize:11,color:'#bbb',textAlign:'center',paddingTop:4}}>
+                  Ctrl+V 貼上，或直接輸入文字
+                </div>
+              )}
+            </div>
+          ) : pendingImages.length === 0 ? (
             <div className="paste-zone-empty" onClick={() => pasteInputRef.current?.click()}>
               <div style={{fontSize:28,marginBottom:6}}>📎</div>
               <div style={{fontSize:13,fontWeight:600,color:'#667eea'}}>拖入 / Ctrl+V 貼上 / 點擊選取</div>
