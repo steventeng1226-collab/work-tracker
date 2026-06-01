@@ -832,7 +832,7 @@ const TaskRow = ({ task, onClick }) => {
 // ════════════════════════════════════════════════════
 // ⑤ DASHBOARD
 // ════════════════════════════════════════════════════
-const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNotes, onAddNote }) => {
+const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNotes, onAddNote, onRefresh }) => {
   const { week } = thisWeekRange();
   const PDOT = {P1:'#E24B4A',P2:'#EF9F27',P3:'#888',P4:'#3B6D11'};
 
@@ -854,7 +854,8 @@ const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNote
           <span className="date-wd">{todayWD()}</span>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:10,color:'#ccc'}}>v3.0</span>
+          <span onClick={onRefresh} style={{fontSize:16,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}} title="立即同步">🔄</span>
+          <span style={{fontSize:10,color:'#ccc'}}>v3.2</span>
           <span onClick={onSettings} style={{fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}}>⚙</span>
         </div>
       </div>
@@ -2029,9 +2030,9 @@ const App = () => {
 
   useEffect(() => { loadAll(); }, []); // 直接載入，GAS URL 已內建
 
-  // ── 背景自動同步（每 60 秒，不顯示 loading）──
+  // ── 背景自動同步（每 15 秒，不顯示 loading）──
   useEffect(() => {
-    const timer = setInterval(async () => {
+    const sync = async () => {
       if (view !== 'list') return;
       try {
         const res = await api.get('getAll', { date: todayStr() });
@@ -2043,8 +2044,14 @@ const App = () => {
         if (res?.members) setMembers(res.members);
       } catch(e) {}
       loadHistory();
-    }, 60000);
-    return () => clearInterval(timer);
+    };
+    const timer = setInterval(sync, 15000);
+
+    // 切換分頁時立即同步（從其他分頁切回 App）
+    const onVisible = () => { if (document.visibilityState === 'visible' && view === 'list') sync(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [view]);
 
   const loadAll = async (isRetry = false) => {
@@ -2152,6 +2159,21 @@ const App = () => {
     showToast('✓ 已更新');
   };
 
+  const handleRefresh = useCallback(async () => {
+    showToast('⟳ 同步中...');
+    try {
+      const res = await api.get('getAll', { date: todayStr() });
+      if (res?.tasks) {
+        const sorted = sortByPriority(res.tasks);
+        setTasks(sorted);
+        try { localStorage.setItem('cache_tasks', JSON.stringify(sorted)); } catch(e) {}
+      }
+      if (res?.members) setMembers(res.members);
+      await loadHistory();
+      showToast('✓ 已同步');
+    } catch(e) { showToast('⚠ 同步失敗'); }
+  }, []);
+
   const handleClosedTask = (id, data) => {
     setTasks(prev => prev.filter(t => t.id !== id));
     setHistory(prev => [{ ...data }, ...prev]);
@@ -2233,7 +2255,7 @@ const App = () => {
   const renderContent = () => {
     if (loading) return <div className="spinner" style={{flexDirection:"column",gap:12}}><div style={{fontSize:28}}>⟳</div><div>載入中，首次約需 5-10 秒...</div></div>;
     switch (tab) {
-      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onSettings={()=>setView('settings')} notes={notes} onViewNotes={()=>setView('notesList')} onAddNote={()=>{setSelectedNote(null);setView('noteForm');}} />;
+      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onSettings={()=>setView('settings')} notes={notes} onViewNotes={()=>setView('notesList')} onAddNote={()=>{setSelectedNote(null);setView('noteForm');}} onRefresh={handleRefresh} />;
       case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading} />;
       case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onAddTask={cat=>{setDefaultCat(cat);setView('add');}} />;
       case 'history': return <HistoryPage history={history} onItemClick={t=>{setSelectedTask(t);setView('historyDetail');}} />;
