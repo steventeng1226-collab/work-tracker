@@ -75,8 +75,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 #root { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-.scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 76px; }
+
+/* ── Scroll ── */
+.scroll-area {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 76px;
+}
 .scroll-area::-webkit-scrollbar { display: none; }
+
+/* ── Tab Bar ── */
 .tab-bar {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 430px;
@@ -89,31 +96,57 @@ body {
 .tab-item.active .t-label { color: var(--red); font-weight: 500; }
 .tab-item .t-bar { width: 18px; height: 2px; border-radius: 1px; background: transparent; transition: background 0.15s; }
 .tab-item.active .t-bar { background: var(--red); }
-.date-bar { background: var(--card); padding: 15px 16px 11px; display: flex; align-items: baseline; justify-content: space-between; border-bottom: 0.5px solid var(--border); }
+
+/* ── Header row ── */
+.date-bar {
+  background: var(--card); padding: 15px 16px 11px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 0.5px solid var(--border);
+}
 .date-main { font-size: 22px; font-weight: 600; color: var(--text); }
 .date-wd { font-size: 13px; color: var(--text-muted); margin-left: 8px; }
 .date-right { font-size: 11px; color: var(--text-muted); }
+
+/* ── Stat cards ── */
 .stat-row { display: flex; gap: 6px; padding: 10px 12px 8px; background: var(--card); border-bottom: 0.5px solid var(--border); }
 .stat-card { flex: 1; background: #fafafa; border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; }
 .stat-num { font-size: 20px; font-weight: 600; }
 .stat-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Section header ── */
 .sec-hdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 5px; }
 .sec-hdr-left { display: flex; align-items: center; gap: 5px; }
 .sec-dot { width: 7px; height: 7px; border-radius: 2px; }
 .sec-title { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; }
 .sec-count { font-size: 11px; color: var(--text-muted); }
-.m-row { background: var(--card); padding: 10px 16px; border-bottom: 0.5px solid var(--divider); display: flex; align-items: center; gap: 9px; cursor: pointer; transition: background 0.1s; }
+
+/* ── Meeting row ── */
+.m-row {
+  background: var(--card); padding: 10px 16px;
+  border-bottom: 0.5px solid var(--divider);
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  transition: background 0.1s;
+}
 .m-row:active { background: #f8f8f8; }
 .m-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: background 0.2s; }
+/* 未完成的會議：粗體黑色 */
 .m-time { font-size: 12px; color: #555; width: 74px; flex-shrink: 0; white-space: nowrap; font-weight: 500; }
 .m-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .m-arrow { font-size: 16px; color: var(--text-hint); flex-shrink: 0; }
+/* 已完成的會議：刪除線＋淺灰色 */
 .m-row.done .m-time { text-decoration: line-through; color: #ccc; font-weight: 400; }
 .m-row.done .m-title { text-decoration: line-through; color: #ccc; font-weight: 400; }
 .m-row.done .m-dot { background: #ddd !important; }
 .m-row.done { background: #fafafa; }
 .m-expand { background: #f9f9f9; padding: 10px 16px 10px 40px; border-bottom: 0.5px solid var(--divider); font-size: 13px; color: #666; line-height: 1.7; }
-.t-row { background: var(--card); padding: 10px 16px; border-bottom: 0.5px solid var(--divider); display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.1s; }
+
+/* ── Task row ── */
+.t-row {
+  background: var(--card); padding: 10px 16px;
+  border-bottom: 0.5px solid var(--divider);
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  transition: background 0.1s;
+}
 .t-row:active { background: #f8f8f8; }
 .p-badge { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
 .p1-b { background: var(--red-bg); color: var(--red-dark); }
@@ -128,30 +161,57 @@ body {
 .t-date-area { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .overdue-pill { background: var(--red-bg); color: var(--red-dark); font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
 .t-date { font-size: 11px; }
-.page-hdr { background: var(--card); padding: 13px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 50; }
+
+/* ── Page headers (detail / form) ── */
+.page-hdr {
+  background: var(--card); padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 0.5px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
 .page-hdr-title { flex: 1; font-size: 17px; font-weight: 500; }
 .back-btn { font-size: 26px; color: var(--text-muted); cursor: pointer; line-height: 1; padding-right: 4px; }
 .hdr-action { font-size: 13px; color: var(--blue); cursor: pointer; font-weight: 500; }
+
+/* ── Form ── */
 .form-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
 .form-section { background: var(--card); margin-bottom: 8px; }
 .form-row { padding: 12px 16px; border-bottom: 0.5px solid #f7f7f7; display: flex; align-items: center; gap: 12px; }
 .form-row:last-child { border-bottom: none; }
 .f-label { font-size: 13px; color: var(--text-muted); width: 82px; flex-shrink: 0; }
-.form-row input, .form-row select { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; color: var(--text); font-family: inherit; -webkit-appearance: none; }
+.form-row input, .form-row select {
+  flex: 1; border: none; outline: none; font-size: 14px;
+  background: transparent; color: var(--text); font-family: inherit;
+  -webkit-appearance: none;
+}
 .form-row input::placeholder { color: var(--text-hint); }
 .form-textarea-wrap { padding: 12px 16px; }
 .form-textarea-wrap label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 8px; }
-.form-textarea-wrap textarea { width: 100%; border: none; outline: none; font-size: 14px; background: transparent; color: var(--text); font-family: inherit; resize: none; min-height: 100px; line-height: 1.7; }
+.form-textarea-wrap textarea {
+  width: 100%; border: none; outline: none; font-size: 14px;
+  background: transparent; color: var(--text); font-family: inherit;
+  resize: none; min-height: 100px; line-height: 1.7;
+}
 .form-textarea-wrap textarea::placeholder { color: var(--text-hint); }
 .created-row { padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
 .created-val { font-size: 14px; color: var(--text-muted); }
-.btn-row { display: flex; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: 0; z-index: 10; background: var(--card); box-shadow: 0 -1px 8px rgba(0,0,0,0.08); }
+
+/* ── Buttons ── */
+.btn-row {
+  display: flex; gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  position: sticky; bottom: 0; z-index: 10;
+  background: var(--card);
+  box-shadow: 0 -1px 8px rgba(0,0,0,0.08);
+}
 .btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
 .btn:active { opacity: 0.75; }
 .btn-primary { background: var(--red); color: #fff; }
 .btn-close { background: var(--orange-bg); color: var(--orange-dark); }
 .btn-secondary { background: var(--gray-light); color: #555; }
 .btn-edit { background: var(--blue-bg); color: var(--blue); }
+
+/* ── Detail ── */
 .detail-wrap { background: var(--bg); min-height: 100%; padding-bottom: 20px; }
 .detail-block { background: var(--card); margin-bottom: 8px; }
 .detail-meta { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 18px; }
@@ -161,7 +221,14 @@ body {
 .detail-text { padding: 12px 16px; }
 .dt-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .dt-value { font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
-.h-search { margin: 10px 14px; background: var(--card); border: 0.5px solid var(--border); border-radius: 9px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; }
+
+/* ── History ── */
+.h-search {
+  margin: 10px 14px;
+  background: var(--card); border: 0.5px solid var(--border);
+  border-radius: 9px; padding: 9px 12px;
+  display: flex; align-items: center; gap: 8px;
+}
 .h-search input { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; font-family: inherit; color: var(--text); }
 .h-search input::placeholder { color: var(--text-hint); }
 .h-month { padding: 8px 16px 4px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; background: var(--bg); }
@@ -171,23 +238,65 @@ body {
 .h-title { font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .h-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
 .h-meta { font-size: 12px; color: #bbb; padding-left: 28px; margin-top: 3px; }
-.fab { position: fixed; bottom: 80px; right: 20px; width: 50px; height: 50px; background: var(--red); border-radius: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 10px rgba(226,75,74,0.45); z-index: 150; transition: transform 0.15s; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 80px; right: 20px;
+  width: 50px; height: 50px;
+  background: var(--red); border-radius: 25px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 3px 10px rgba(226,75,74,0.45); z-index: 150;
+  transition: transform 0.15s;
+}
 .fab:active { transform: scale(0.92); }
-.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(30,30,30,0.85); color: #fff; padding: 9px 18px; border-radius: 20px; font-size: 13px; z-index: 999; white-space: nowrap; pointer-events: none; animation: fadeIn 0.2s ease; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(30,30,30,0.85); color: #fff;
+  padding: 9px 18px; border-radius: 20px; font-size: 13px;
+  z-index: 999; white-space: nowrap; pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
 @keyframes fadeIn { from { opacity:0; transform: translateX(-50%) translateY(-6px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+/* ── Loading / Empty ── */
 .spinner { display: flex; align-items: center; justify-content: center; padding: 48px 16px; color: var(--text-muted); font-size: 14px; }
 .empty { text-align: center; padding: 48px 16px; color: var(--text-hint); font-size: 14px; }
+
+/* ── Setup screen ── */
 .setup-wrap { padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; }
 .setup-title { font-size: 20px; font-weight: 600; }
 .setup-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
 .setup-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; }
 .setup-input:focus { border-color: var(--red); }
-.ai-fill-btn { display:flex;align-items:center;justify-content:center;gap:7px; width:100%;padding:12px;border-radius:10px;border:none; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff;font-size:14px;font-weight:500;cursor:pointer; font-family:inherit;transition:opacity 0.15s; }
+
+/* ── v3.0 新增 ── */
+.ai-fill-btn {
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:12px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  color:#fff;font-size:14px;font-weight:500;cursor:pointer;
+  font-family:inherit;transition:opacity 0.15s;
+}
 .ai-fill-btn:active{opacity:0.8;}
-.ai-append-btn{ display:flex;align-items:center;gap:4px; background:#F0EBF8;color:#5B3EA0;border-radius:6px; padding:4px 9px;font-size:11px;font-weight:500; border:none;cursor:pointer;font-family:inherit;transition:opacity 0.15s; }
+.ai-append-btn{
+  display:flex;align-items:center;gap:4px;
+  background:#F0EBF8;color:#5B3EA0;border-radius:6px;
+  padding:4px 9px;font-size:11px;font-weight:500;
+  border:none;cursor:pointer;font-family:inherit;transition:opacity 0.15s;
+}
 .ai-append-btn:active{opacity:0.8;}
-.cat-tab-bar{ display:flex;gap:8px;padding:10px 14px 8px; background:var(--card);border-bottom:0.5px solid var(--border); }
-.cat-tab-btn{ flex:1;padding:8px 0;border-radius:8px; border:0.5px solid var(--border);background:#fff; color:var(--text-muted);font-size:13px;font-weight:500; cursor:pointer;font-family:inherit;transition:all 0.15s; }
+.cat-tab-bar{
+  display:flex;gap:8px;padding:10px 14px 8px;
+  background:var(--card);border-bottom:0.5px solid var(--border);
+}
+.cat-tab-btn{
+  flex:1;padding:8px 0;border-radius:8px;
+  border:0.5px solid var(--border);background:#fff;
+  color:var(--text-muted);font-size:13px;font-weight:500;
+  cursor:pointer;font-family:inherit;transition:all 0.15s;
+}
 .cat-tab-btn.active{background:var(--red);color:#fff;border-color:var(--red);}
 .week-card{margin:10px 12px 0;border-radius:10px;overflow:hidden;border:1px solid #EDD9A3;background:#FFFBF0;}
 .week-card-hdr{padding:9px 14px;display:flex;align-items:center;gap:6px;border-bottom:0.5px solid #EDD9A3;}
@@ -198,76 +307,173 @@ body {
 .dsec-left{display:flex;align-items:center;gap:6px;}
 .dsec-title{font-size:13px;font-weight:600;}
 .dsec-count{font-size:12px;color:var(--text-muted);}
-.settings-key-input{ width:100%;border:1px solid var(--border);border-radius:8px; padding:10px 12px;font-size:13px;font-family:inherit; outline:none;color:var(--text);background:#fff; }
+.settings-key-input{
+  width:100%;border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;font-size:13px;font-family:inherit;
+  outline:none;color:var(--text);background:#fff;
+}
 .settings-key-input:focus{border-color:#667eea;}
-.paste-zone-empty{ border:2px dashed #C4B5FD;border-radius:12px;background:#FAFAFF; padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.15s; }
+
+/* ── 貼圖框 Paste Zone ── */
+.paste-zone-empty{
+  border:2px dashed #C4B5FD;border-radius:12px;background:#FAFAFF;
+  padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.15s;
+}
 .paste-zone-empty:hover,.paste-zone-empty.over{border-color:#667eea;background:#F0ECFF;}
-.paste-zone-filled{ border:1px solid #D4CCFF;border-radius:12px;background:#FAFAFF;padding:12px; }
+.paste-zone-filled{
+  border:1px solid #D4CCFF;border-radius:12px;background:#FAFAFF;padding:12px;
+}
 .img-thumb-wrap{position:relative;width:72px;height:72px;flex-shrink:0;}
 .img-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #E0DAFF;}
-.img-thumb-del{ position:absolute;top:-7px;right:-7px;width:20px;height:20px; background:#E24B4A;color:#fff;border-radius:50%; display:flex;align-items:center;justify-content:center; font-size:12px;cursor:pointer;font-weight:700;line-height:1; }
-.img-thumb-add{ width:72px;height:72px;border-radius:8px;border:2px dashed #C4B5FD; display:flex;align-items:center;justify-content:center; cursor:pointer;color:#667eea;font-size:28px;background:#fff;flex-shrink:0; }
-.note-list-item{ background:var(--card);border-left:3px solid #667eea; padding:11px 14px 11px 13px;cursor:pointer; border-bottom:0.5px solid var(--divider); }
+.img-thumb-del{
+  position:absolute;top:-7px;right:-7px;width:20px;height:20px;
+  background:#E24B4A;color:#fff;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;cursor:pointer;font-weight:700;line-height:1;
+}
+.img-thumb-add{
+  width:72px;height:72px;border-radius:8px;border:2px dashed #C4B5FD;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#667eea;font-size:28px;background:#fff;flex-shrink:0;
+}
+
+/* ── 學習筆記 ── */
+.note-list-item{
+  background:var(--card);border-left:3px solid #667eea;
+  padding:11px 14px 11px 13px;cursor:pointer;
+  border-bottom:0.5px solid var(--divider);
+}
 .note-list-item:active{background:#FAFAFF;}
 .note-cat-tag{font-size:10px;color:#667eea;font-weight:600;margin-bottom:3px;}
 .note-conclusion-text{font-size:13px;font-weight:500;color:#1a1a1a;line-height:1.5;}
 .note-tags-text{font-size:10px;color:#bbb;margin-top:3px;}
-.note-detail-wrap{ padding:8px 16px 12px 16px;background:#FAFAFF; border-left:3px solid #D4CCFF;border-bottom:0.5px solid var(--divider); }
-.note-reminder-bar{ background:#F3F0FF;border-left:3px solid #667eea; padding:10px 14px;margin-bottom:8px; }
-.dash-notes-row{ background:var(--card);padding:10px 16px; border-left:3px solid #667eea;border-bottom:0.5px solid var(--divider); cursor:pointer; }
+.note-detail-wrap{
+  padding:8px 16px 12px 16px;background:#FAFAFF;
+  border-left:3px solid #D4CCFF;border-bottom:0.5px solid var(--divider);
+}
+.note-reminder-bar{
+  background:#F3F0FF;border-left:3px solid #667eea;
+  padding:10px 14px;margin-bottom:8px;
+}
+.dash-notes-row{
+  background:var(--card);padding:10px 16px;
+  border-left:3px solid #667eea;border-bottom:0.5px solid var(--divider);
+  cursor:pointer;
+}
 .dash-notes-row:active{background:#FAFAFF;}
 </style>
 </head>
 <body>
 <div id="root"></div>
+
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
+// ════════════════════════════════════════════════════
+// ① CONFIG  ← 部署 Apps Script 後填入 URL
+// ════════════════════════════════════════════════════
+// GAS 網址已內建，不需要手動設定（更換部署時只需改這一行）
 const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycby-eh45LbxCdyks7fhIoWpvkocbOVKBqXmH3zNvuwIjQdQqGpFGvpWIkzBskReWHHP7hg/exec';
 let GAS_URL = HARDCODED_GAS_URL;
 try { localStorage.setItem('gas_url', GAS_URL); } catch(e) {}
 
+// ════════════════════════════════════════════════════
+// ② UTILS
+// ════════════════════════════════════════════════════
 const WEEKDAYS = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
-const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-const todayDisplay = () => { const d = new Date(); return `${d.getFullYear()} / ${d.getMonth()+1} / ${d.getDate()}`; };
+
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const todayDisplay = () => {
+  const d = new Date();
+  return `${d.getFullYear()} / ${d.getMonth()+1} / ${d.getDate()}`;
+};
 const todayWD = () => WEEKDAYS[new Date().getDay()];
-const fmtShort = s => { if(!s) return ''; const d = new Date(s + 'T00:00:00'); if(isNaN(d)) return s; return `${d.getMonth()+1}/${d.getDate()}`; };
-const utcToLocalTime = utcISO => { if (!utcISO) return ''; try { const d = new Date(utcISO); if (isNaN(d)) return ''; const h = d.getHours(); const mi = d.getMinutes(); return (h < 10 ? '0'+h : h) + ':' + (mi < 10 ? '0'+mi : mi); } catch(e) { return ''; } };
-const utcToLocalDate = utcISO => { if (!utcISO) return ''; try { const d = new Date(utcISO); if (isNaN(d)) return ''; const y = d.getFullYear(); const mo = String(d.getMonth()+1).padStart(2,'0'); const dy = String(d.getDate()).padStart(2,'0'); return `${y}-${mo}-${dy}`; } catch(e) { return ''; } };
-const fmtFull = s => { if(!s) return '—'; const d = new Date(s + 'T00:00:00'); if(isNaN(d)) return s; return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; };
-const isOverdue = dueDate => { if(!dueDate) return false; const due = new Date(dueDate + 'T00:00:00'); const now = new Date(); now.setHours(0,0,0,0); return due < now; };
-const isMeetingOver = (m) => { try { if (m.endUTC) return new Date(m.endUTC) < new Date(); const endStr = m.endTime || m.startTime; if (!endStr) return false; const today = todayStr(); return new Date(today + 'T' + endStr + ':00') < new Date(); } catch(e) { return false; } };
-const thisWeekRange = () => { const now = new Date(); now.setHours(0,0,0,0); const week = new Date(now); week.setDate(week.getDate()+7); return { now, week }; };
+
+const fmtShort = s => {
+  if(!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return s;
+  return `${d.getMonth()+1}/${d.getDate()}`;
+};
+
+// 將 UTC ISO 字串轉為手機本地時間 HH:MM（跟著手機時區走）
+const utcToLocalTime = utcISO => {
+  if (!utcISO) return '';
+  try {
+    const d = new Date(utcISO);
+    if (isNaN(d)) return '';
+    const h  = d.getHours();
+    const mi = d.getMinutes();
+    return (h < 10 ? '0'+h : h) + ':' + (mi < 10 ? '0'+mi : mi);
+  } catch(e) { return ''; }
+};
+
+// 將 UTC ISO 字串轉為手機本地日期 YYYY-MM-DD
+const utcToLocalDate = utcISO => {
+  if (!utcISO) return '';
+  try {
+    const d = new Date(utcISO);
+    if (isNaN(d)) return '';
+    const y  = d.getFullYear();
+    const mo = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    return `${y}-${mo}-${dy}`;
+  } catch(e) { return ''; }
+};
+const fmtFull = s => {
+  if(!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  if(isNaN(d)) return s;
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+};
+const isOverdue = dueDate => {
+  if(!dueDate) return false;
+  const due = new Date(dueDate + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return due < now;
+};
+
+// 判斷會議是否已結束（結束時間 < 現在時間）
+const isMeetingOver = (m) => {
+  try {
+    // 優先用 UTC ISO 判斷
+    if (m.endUTC) return new Date(m.endUTC) < new Date();
+    // 備用：用今天日期 + endTime 判斷
+    const endStr = m.endTime || m.startTime;
+    if (!endStr) return false;
+    const today = todayStr();
+    return new Date(today + 'T' + endStr + ':00') < new Date();
+  } catch(e) { return false; }
+};
+const thisWeekRange = () => {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const week = new Date(now); week.setDate(week.getDate()+7);
+  return { now, week };
+};
+
+// 標準化優先等級：Sheets 可能存 "P1 緊急" 或 "P1"，統一取 P1~P4
 const normP = p => { const m = String(p||'').match(/P[1-4]/); return m ? m[0] : 'P3'; };
 const PMAP = { P1:{badge:'p1-b',text:'p1-t',label:'緊急'}, P2:{badge:'p2-b',text:'p2-t',label:'重要'}, P3:{badge:'p3-b',text:'p3-t',label:'一般'}, P4:{badge:'p4-b',text:'p4-t',label:'備忘'} };
 const pInfo = p => PMAP[p] || PMAP.P3;
+
 const sortByPriority = tasks => [...tasks].sort((a, b) => {
-  const pa = parseInt(normP(a.priority).slice(1)); const pb = parseInt(normP(b.priority).slice(1));
+  const pa = parseInt(normP(a.priority).slice(1));
+  const pb = parseInt(normP(b.priority).slice(1));
   if (pa !== pb) return pa - pb;
-  const oa = isOverdue(a.dueDate) ? 0 : 1; const ob = isOverdue(b.dueDate) ? 0 : 1;
+  const oa = isOverdue(a.dueDate) ? 0 : 1;
+  const ob = isOverdue(b.dueDate) ? 0 : 1;
   if (oa !== ob) return oa - ob;
   return new Date(a.dueDate || '9999') - new Date(b.dueDate || '9999');
 });
 
-// ── 圖片壓縮 ──────────────────────────────────────────────
-const resizeB64 = (base64, type) => new Promise(resolve => {
-  const img = new Image();
-  img.onload = () => {
-    const MAX = 1024;
-    const s = Math.min(1, MAX / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    resolve(c.toDataURL('image/jpeg', 0.75).split(',')[1]);
-  };
-  img.onerror = () => resolve(base64);
-  img.src = `data:${type||'image/jpeg'};base64,${base64}`;
-});
-
-// ── Gemini 圖片分析 ──────────────────────────────────────
+// ── Gemini AI 圖片分析 ──────────────────────────────────────
 const analyzeWithGemini = async (base64, mimeType) => {
   const key = localStorage.getItem('gemini_key') || '';
   if (!key) throw new Error('NOKEY');
@@ -276,31 +482,35 @@ const analyzeWithGemini = async (base64, mimeType) => {
 【重要】無論圖片是英文、中文或其他語言，所有輸出內容一律使用繁體中文。
 只回傳JSON格式（不含markdown、不含其他文字）：
 {"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
+
 【重點摘要原則 - 全面性優先】
 - progress條列所有重要資訊，寧可多點也不能漏掉關鍵細節
 - 每個要點獨立一行，以•開頭
 - 包含：任務背景、要求內容、關係人、數字/日期、注意事項
 - 最多10點，但內容完整比點數少更重要
+
 【next_step原則 - 結論先行 + 見林再見樹】
 - 先說最關鍵的一個行動（見林）
 - 用動詞開頭：確認/發送/聯繫/準備/回覆/安排
 - 20字內，簡潔有力
+
 【優先等級判斷】
 - 寄件人/交辦人是Cliff → P1（無例外）
 - 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
 - 購物/家事/個人/健康 → category為生活`;
+
   const isPDF = (mimeType === 'application/pdf');
   const imgData = isPDF ? base64 : await resizeB64(base64, mimeType);
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{inlineData:{mimeType:mimeType||'image/jpeg',data:imgData}},{text:prompt}]}]}) });
-  if (!res.ok) {
-    let gErr = 'Gemini 錯誤 ' + res.status;
-    try { const e = await res.json(); const d = e.error?.message||'';
-      if (res.status===429) gErr = (d.toLowerCase().includes('quota')||d.toLowerCase().includes('resource')) ? 'Gemini 每日配額已用完，請明天再試或切換 Claude' : 'Gemini 請求過於頻繁，請等 1 分鐘後再試';
-      else if (res.status===403) gErr = 'Gemini API Key 無效，請至 ⚙ 重新輸入';
-      else if (d) gErr = 'Gemini ' + res.status + '：' + d.slice(0,80);
-    } catch(ex) {}
-    throw new Error(gErr);
-  }
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[
+        {inlineData:{mimeType:mimeType||'image/jpeg',data:imgData}},
+        {text:prompt}
+      ]}]})
+    }
+  );
+  if (!res.ok) { if (res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if (res.status===403) throw new Error('API Key 無效，請至 ⚙ 設定重新輸入'); throw new Error('Gemini 錯誤 ' + res.status); }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -308,13 +518,21 @@ const analyzeWithGemini = async (base64, mimeType) => {
 };
 
 // ════════════════════════════════════════════════════
-// API
+// ③ API
 // ════════════════════════════════════════════════════
-const fetchWithTimeout = (url, options={}, ms=30000) => {
+// ── Apps Script CORS 說明 ──────────────────────────────────
+// GAS 不支援 CORS preflight（OPTIONS），
+// 所以 POST 必須用 text/plain（不觸發 preflight），
+// GAS 端用 e.postData.contents 解析 JSON 字串。
+// GET 請求無 preflight 問題，直接使用。
+// ────────────────────────────────────────────────────────
+
+const fetchWithTimeout = (url, options={}, ms=30000) => {  // 30秒 timeout
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(t));
 };
+
 const api = {
   async get(action, params = {}) {
     if (!GAS_URL) GAS_URL = HARDCODED_GAS_URL;
@@ -327,7 +545,12 @@ const api = {
   },
   async post(body) {
     if (!GAS_URL) GAS_URL = HARDCODED_GAS_URL;
-    const res = await fetchWithTimeout(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+    // 使用 text/plain 避免 CORS preflight，GAS 端解析 JSON 字串
+    const res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data && data.error) throw new Error(data.error);
@@ -339,80 +562,86 @@ const api = {
   getMembers:  () => api.get('getMembers'),
   addTask:     data => api.post({ action:'addTask', ...data }),
   updateTask:  (id, data) => api.post({ action:'updateTask', id, ...data }),
-  closeTask:   (id, data) => api.post({ action:'closeTask', id, ...data }),
-  deleteTask:  id => api.post({ action:'deleteTask', id }),
+  closeTask:    (id, data) => api.post({ action:'closeTask', id, ...data }),
+  deleteTask:    id => api.post({ action:'deleteTask', id }),
   deleteHistory: id => api.post({ action:'deleteHistory', id }),
-  uploadImage: (base64, filename, taskId) => api.post({ action:'uploadImage', base64, filename, taskId }),
+  uploadImage:   (base64, filename, taskId) => api.post({ action:'uploadImage', base64, filename, taskId }),
 };
 
-// ── Gemini 純文字分析 ────────────────────────────────────
+// ── Gemini 純文字分析（HTML / EML 用）────────────────────────
 const analyzeTextWithGemini = async (emailText, key) => {
   const today = todayStr();
   const prompt = `你是專業工作助理，分析以下Email內容，今天日期是${today}。
 【重要】無論Email是英文、中文或其他語言，所有輸出內容一律使用繁體中文。
 只回傳JSON格式（不含markdown）：
 {"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
+
 【重點摘要原則 - 全面性優先】
 - progress條列所有重要資訊，寧可多點也不能漏掉關鍵細節，最多10點
 - 包含：任務背景、要求內容、關係人、數字/日期、注意事項
+
 【next_step - 結論先行 + 見林再見樹】
 - 最關鍵的一個行動，動詞開頭，20字內
+
 【優先等級判斷】
 - 寄件人/交辦人是Cliff → P1（無例外）
 - 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
+
 以下是Email內容：
 ---
 ${emailText}`;
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:prompt}]}]}) });
-  if (!res.ok) {
-    let gErr = 'Gemini 錯誤 ' + res.status;
-    try { const e = await res.json(); const d = e.error?.message||'';
-      if (res.status===429) gErr = (d.toLowerCase().includes('quota')||d.toLowerCase().includes('resource')) ? 'Gemini 每日配額已用完，請明天再試或切換 Claude' : 'Gemini 請求過於頻繁，請等 1 分鐘後再試';
-      else if (res.status===403) gErr = 'Gemini API Key 無效，請至 ⚙ 重新輸入';
-      else if (d) gErr = 'Gemini ' + res.status + '：' + d.slice(0,80);
-    } catch(ex) {}
-    throw new Error(gErr);
-  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    }
+  );
+  if (!res.ok) { if (res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試'); if (res.status===403) throw new Error('API Key 無效，請至 ⚙ 設定重新輸入'); throw new Error('Gemini 錯誤 ' + res.status); }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
 
-const buildAIPrompt = (today, forImage = true) => {
-  const src = forImage ? '分析這張圖片/文件' : '分析以下Email文字內容';
-  return `你是專業工作助理，${src}，今天日期是${today}。
-【重要】無論內容是英文、中文或其他語言，所有輸出一律使用繁體中文。
-只回傳JSON格式（不含markdown、不含其他文字）：
-{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
-【重點摘要 - 全面性優先：寧多勿漏】
-- progress條列所有重要資訊，最多10點，每點以•開頭
-- 包含：任務背景/要求/關係人/數字/日期/注意事項
-【next_step - 結論先行 + 見林再見樹】
-- 最關鍵的一個行動，動詞開頭，20字內
-【優先等級判斷】
-- 寄件人/交辦人是Cliff → P1（無例外）
-- 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
-- 購物/家事/個人/健康 → category為生活`;
-};
+// ── 圖片壓縮（解決大圖 404/413 問題）────────────────────────
+const resizeB64 = (base64, type) => new Promise(resolve => {
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1024;
+    const s = Math.min(1, MAX / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * s);
+    c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    resolve(c.toDataURL('image/jpeg', 0.75).split(',')[1]);
+  };
+  img.onerror = () => resolve(base64); // 失敗就用原圖
+  img.src = `data:${type||'image/jpeg'};base64,${base64}`;
+});
 
-// ── ★ 多圖分析（Gemini）────────────────────────────────
+// ── 多圖分析（Gemini）────────────────────────────────────────
 const analyzeMultipleWithGemini = async (images, key) => {
   if (!key) throw new Error('NOKEY');
   const today = todayStr();
   const prompt = buildAIPrompt(today, true);
-  const compressed = await Promise.all(images.map(img => img.isPDF ? Promise.resolve(img.base64) : resizeB64(img.base64, img.type)));
-  const parts = [...compressed.map((b64, i) => ({inlineData:{mimeType: images[i].isPDF?'application/pdf':'image/jpeg', data:b64}})), {text: prompt}];
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {method:'POST',headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts}]})});
-  if (!res.ok) {
-    let gErr = 'Gemini 錯誤 ' + res.status;
-    try { const e = await res.json(); const d = e.error?.message||'';
-      if (res.status===429) gErr = (d.toLowerCase().includes('quota')||d.toLowerCase().includes('resource')) ? 'Gemini 每日配額已用完，請明天再試或切換 Claude' : 'Gemini 請求過於頻繁，請等 1 分鐘後再試';
-      else if (res.status===403) gErr = 'Gemini API Key 無效，請至 ⚙ 重新輸入';
-      else if (res.status===404) gErr = 'Gemini 模型不可用，建議切換至 Claude';
-      else if (d) gErr = 'Gemini ' + res.status + '：' + d.slice(0,80);
-    } catch(ex) {}
-    throw new Error(gErr);
+  // 壓縮所有圖片（手機截圖原始大小約 5-8MB，壓縮到 ~200KB）
+  const compressed = await Promise.all(
+    images.map(img => img.isPDF ? Promise.resolve(img.base64) : resizeB64(img.base64, img.type))
+  );
+  const parts = [
+    ...compressed.map((b64, i) => ({inlineData:{mimeType: images[i].isPDF?'application/pdf':'image/jpeg', data:b64}})),
+    {text: prompt}
+  ];
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    {method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({contents:[{parts}]})}
+  );
+  if (!res.ok){
+    if(res.status===429) throw new Error('Gemini 請求過於頻繁，請等 1 分鐘後再試');
+    if(res.status===404) throw new Error('Gemini 模型不可用，建議在 ⚙ 切換至 Claude');
+    throw new Error('Gemini 錯誤 '+res.status);
   }
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
@@ -420,29 +649,20 @@ const analyzeMultipleWithGemini = async (images, key) => {
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
 
-// ── ★ 多圖分析（Claude）— 修正：壓縮圖片 + 新模型 ────────
+// ── 多圖分析（Claude）────────────────────────────────────────
 const analyzeMultipleWithClaude = async (images, key) => {
   if (!key) throw new Error('未設定 Claude API Key');
   const today = todayStr();
   const prompt = buildAIPrompt(today, true);
-  // ★ FIX: 壓縮圖片，避免大圖 413/400（同 Gemini 做法）
-  const compressed = await Promise.all(
-    images.map(img => img.isPDF ? Promise.resolve(img.base64) : resizeB64(img.base64, img.type))
-  );
   const content = [
-    ...compressed.map((b64, i) => ({type:'image',source:{type:'base64',media_type:images[i].isPDF?'application/pdf':'image/jpeg',data:b64}})),
+    ...images.map(img => ({type:'image',source:{type:'base64',media_type:img.type||'image/jpeg',data:img.base64}})),
     {type:'text',text:prompt}
   ];
   const res = await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    // ★ FIX: 換成 claude-haiku-4-5-20251001（haiku-20240307 已退場）
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,
+    headers:{'Content-Type':'application/json','x-api-key':key,
+      'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-3-haiku-20240307',max_tokens:1024,
       messages:[{role:'user',content}]}),
   });
   if (!res.ok){
@@ -456,8 +676,27 @@ const analyzeMultipleWithClaude = async (images, key) => {
   const text = data.content?.[0]?.text||'';
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
+const buildAIPrompt = (today, forImage = true) => {
+  const src = forImage ? '分析這張圖片/文件' : '分析以下Email文字內容';
+  return `你是專業工作助理，${src}，今天日期是${today}。
+【重要】無論內容是英文、中文或其他語言，所有輸出一律使用繁體中文。
+只回傳JSON格式（不含markdown、不含其他文字）：
+{"category":"工作","priority":"P3","title":"任務標題15字內","owner":"","dueDate":"","progress":"• 重點一\\n• 重點二\\n• 重點三","next_step":"下一步行動（動詞開頭，20字內）"}
 
-// ── ★ Claude 單圖/PDF 分析 — 修正：新模型 ──────────────
+【重點摘要 - 全面性優先：寧多勿漏】
+- progress條列所有重要資訊，最多10點，每點以•開頭
+- 包含：任務背景/要求/關係人/數字/日期/注意事項
+
+【next_step - 結論先行 + 見林再見樹】
+- 最關鍵的一個行動，動詞開頭，20字內
+
+【優先等級判斷】
+- 寄件人/交辦人是Cliff → P1（無例外）
+- 截止日距今≤3天 → P1；≤7天 → P2；其餘 → P3
+- 購物/家事/個人/健康 → category為生活`;
+};
+
+// ── Claude API（圖片 + PDF）────────────────────────────────────
 const analyzeWithClaude = async (base64, mimeType) => {
   const key = localStorage.getItem('claude_key') || '';
   if (!key) throw new Error('未設定 Claude API Key，請至 ⚙ 設定輸入');
@@ -475,9 +714,8 @@ const analyzeWithClaude = async (base64, mimeType) => {
       'anthropic-version':'2023-06-01',
       'anthropic-dangerous-direct-browser-access':'true',
     },
-    // ★ FIX: 換成 claude-haiku-4-5-20251001
     body: JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
+      model:'claude-3-haiku-20240307',
       max_tokens:1024,
       messages:[{ role:'user', content:[ mediaBlock, { type:'text', text:prompt } ] }],
     }),
@@ -494,7 +732,7 @@ const analyzeWithClaude = async (base64, mimeType) => {
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
 
-// ── ★ Claude 純文字分析 — 修正：新模型 ──────────────────
+// ── Claude 純文字分析（HTML / EML）────────────────────────────
 const analyzeTextWithClaude = async (emailText, key) => {
   const today = todayStr();
   const prompt = buildAIPrompt(today, false) + '\n\n---\n' + emailText;
@@ -506,9 +744,8 @@ const analyzeTextWithClaude = async (emailText, key) => {
       'anthropic-version':'2023-06-01',
       'anthropic-dangerous-direct-browser-access':'true',
     },
-    // ★ FIX: 換成 claude-haiku-4-5-20251001
     body: JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
+      model:'claude-3-haiku-20240307',
       max_tokens:1024,
       messages:[{ role:'user', content: prompt }],
     }),
@@ -525,29 +762,44 @@ const analyzeTextWithClaude = async (emailText, key) => {
   return JSON.parse(text.replace(/```json|```/g,'').trim());
 };
 
-// ── 學習筆記工具 ─────────────────────────────────────────
-const getNotes = () => { try { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); } catch(e) { return []; } };
-const saveNotes = notes => { try { localStorage.setItem('personal_notes', JSON.stringify(notes)); } catch(e) {} };
+// ── 學習筆記 工具函式 ─────────────────────────────────────────
+const getNotes = () => {
+  try { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); }
+  catch(e) { return []; }
+};
+const saveNotes = notes => {
+  try { localStorage.setItem('personal_notes', JSON.stringify(notes)); } catch(e) {}
+};
+// 比對筆記標籤 vs 任務標題/類別，找出相關筆記
 const matchNotes = (notes, title, category) => {
   if (!notes.length || (!title && !category)) return [];
   const hay = ((title||'') + ' ' + (category||'')).toLowerCase();
-  return notes.filter(n => { if (!n.tags) return false; return n.tags.split(/[,，\s]+/).map(t=>t.trim().toLowerCase()).filter(Boolean).some(tag => tag && hay.includes(tag)); });
+  return notes.filter(n => {
+    if (!n.tags) return false;
+    return n.tags.split(/[,，\s]+/).map(t=>t.trim().toLowerCase()).filter(Boolean)
+      .some(tag => tag && hay.includes(tag));
+  });
 };
-
+// ════════════════════════════════════════════════════
 const PBadge = ({ level }) => {
   const p = normP(level);
   const BG  = {P1:'#FCEBEB', P2:'#FAEEDA', P3:'#f0f0f0', P4:'#EAF3DE'};
   const COL = {P1:'#A32D2D', P2:'#854F0B', P3:'#555555', P4:'#27500A'};
   const LBL = {P1:'緊急',    P2:'重要',    P3:'一般',    P4:'備忘'};
   return (
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',width:34,minWidth:34,height:36,borderRadius:6,flexShrink:0,background:BG[p],border:'none'}}>
-      <span style={{fontSize:11,fontWeight:600,lineHeight:1.2,color:COL[p]}}>{p}</span>
-      <span style={{fontSize:9,fontWeight:400,lineHeight:1.2,color:COL[p]}}>{LBL[p]}</span>
+    <div style={{
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      width:34, minWidth:34, height:36, borderRadius:6, flexShrink:0,
+      background: BG[p], border:'none',
+    }}>
+      <span style={{fontSize:11, fontWeight:600, lineHeight:1.2, color:COL[p]}}>{p}</span>
+      <span style={{fontSize:9,  fontWeight:400, lineHeight:1.2, color:COL[p]}}>{LBL[p]}</span>
     </div>
   );
 };
 
-const PCOL = { P1:'#E24B4A', P2:'#EF9F27', P3:'#1a1a1a', P4:'#3B6D11' };
+const PCOL = { P1:'#E24B4A', P2:'#EF9F27', P3:'#1a1a1a', P4:'#3B6D11' }; // P1=紅 P2=橘 P3=黑 P4=綠
+
 const TaskRow = ({ task, onClick }) => {
   const p = normP(task.priority);
   const overdue = isOverdue(task.dueDate);
@@ -555,36 +807,59 @@ const TaskRow = ({ task, onClick }) => {
   return (
     <div className="t-row" style={{alignItems: task.next_step ? 'flex-start' : 'center'}} onClick={() => onClick(task)}>
       <PBadge level={p} />
-      <div style={{flex:1,overflow:'hidden',paddingTop:task.next_step?1:0}}>
-        <div style={{fontSize:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:titleColor,fontWeight:400}}>{task.title}</div>
-        {task.next_step && <div style={{fontSize:11,color:'#667eea',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>→ {task.next_step}</div>}
+      <div style={{flex:1, overflow:'hidden', paddingTop: task.next_step ? 1 : 0}}>
+        <div style={{
+          fontSize:14, whiteSpace:'nowrap', overflow:'hidden',
+          textOverflow:'ellipsis', color: titleColor, fontWeight:400,
+        }}>{task.title}</div>
+        {task.next_step && (
+          <div style={{
+            fontSize:11, color:'#667eea', marginTop:2,
+            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+          }}>→ {task.next_step}</div>
+        )}
       </div>
-      <div className="t-date-area" style={{paddingTop:task.next_step?2:0}}>
+      <div className="t-date-area" style={{paddingTop: task.next_step ? 2 : 0}}>
         {overdue && <span className="overdue-pill">逾期</span>}
-        <span style={{fontSize:11,color:overdue?'#E24B4A':'#bbb'}}>{fmtShort(task.dueDate)}</span>
+        <span style={{fontSize:11, color: overdue ? '#E24B4A' : '#bbb'}}>
+          {fmtShort(task.dueDate)}
+        </span>
       </div>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════
-// DASHBOARD
+// ⑤ DASHBOARD
 // ════════════════════════════════════════════════════
 const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNotes, onAddNote }) => {
   const { week } = thisWeekRange();
   const PDOT = {P1:'#E24B4A',P2:'#EF9F27',P3:'#888',P4:'#3B6D11'};
+
   const workTasks = sortByPriority(tasks.filter(t => (t.category||'工作') !== '生活'));
   const lifeTasks = sortByPriority(tasks.filter(t => (t.category||'工作') === '生活'));
-  const weekTasks = sortByPriority(workTasks.filter(t => { if (!t.dueDate) return false; const d = new Date(t.dueDate + 'T00:00:00'); const now = new Date(); now.setHours(0,0,0,0); return d <= week; }));
+  const weekTasks = sortByPriority(workTasks.filter(t => {
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate + 'T00:00:00');
+    const now = new Date(); now.setHours(0,0,0,0);
+    return d <= week;
+  }));
+
   return (
     <div>
+      {/* Header */}
       <div className="date-bar">
-        <div><span className="date-main">{todayDisplay()}</span><span className="date-wd">{todayWD()}</span></div>
+        <div>
+          <span className="date-main">{todayDisplay()}</span>
+          <span className="date-wd">{todayWD()}</span>
+        </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:10,color:'#ccc'}}>v3.2</span>
+          <span style={{fontSize:10,color:'#ccc'}}>v3.0</span>
           <span onClick={onSettings} style={{fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}}>⚙</span>
         </div>
       </div>
+
+      {/* 🔥 本週截止（工作任務）*/}
       {weekTasks.length > 0 && (
         <div className="week-card">
           <div className="week-card-hdr">
@@ -593,37 +868,57 @@ const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNote
             <span style={{fontSize:11,color:'#C07830',marginLeft:'auto',background:'#FAEEDA',padding:'1px 8px',borderRadius:10}}>{weekTasks.length} 項</span>
           </div>
           {weekTasks.map((t,i) => {
-            const p = normP(t.priority); const over = isOverdue(t.dueDate);
+            const p = normP(t.priority);
+            const over = isOverdue(t.dueDate);
             return (
-              <div key={i} className="week-row" onClick={() => onTaskClick(t)} style={{background:over?'#FFF3F0':'transparent'}}>
+              <div key={i} className="week-row" onClick={() => onTaskClick(t)}
+                style={{background:over?'#FFF3F0':'transparent'}}>
                 <div style={{width:7,height:7,borderRadius:'50%',background:PDOT[p],flexShrink:0}}/>
                 <div style={{flex:1,overflow:'hidden'}}>
                   <div style={{fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:over?'#E24B4A':'#1a1a1a'}}>{t.title}</div>
                   {t.owner&&<div style={{fontSize:10,color:'#bbb',marginTop:1}}>{t.owner}</div>}
                 </div>
-                <span style={{fontSize:11,fontWeight:500,flexShrink:0,color:over?'#E24B4A':'#C07830',whiteSpace:'nowrap'}}>{over?'⚠ 逾期':fmtShort(t.dueDate)}</span>
+                <span style={{fontSize:11,fontWeight:500,flexShrink:0,color:over?'#E24B4A':'#C07830',whiteSpace:'nowrap'}}>
+                  {over?'⚠ 逾期':fmtShort(t.dueDate)}
+                </span>
               </div>
             );
           })}
         </div>
       )}
+
+
+      {/* 💼 工作任務 */}
       <div style={{background:'linear-gradient(90deg,#EBF3FA,#F5F9FF)',marginTop:10}}>
         <div className="dsec-hdr">
           <div className="dsec-left"><span style={{fontSize:14}}>💼</span><span className="dsec-title" style={{color:'var(--blue)'}}>工作任務</span></div>
           <span className="dsec-count">{workTasks.length} 項</span>
         </div>
       </div>
-      {workTasks.length===0 ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb'}}>無進行中工作任務</div> : workTasks.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)}
+      {workTasks.length===0
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb'}}>無進行中工作任務</div>
+        : workTasks.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)
+      }
+
+      {/* 🏠 生活事項 */}
       <div style={{background:'linear-gradient(90deg,#EAF3DE,#F5FAF0)',marginTop:10}}>
         <div className="dsec-hdr">
           <div className="dsec-left"><span style={{fontSize:14}}>🏠</span><span className="dsec-title" style={{color:'var(--green)'}}>生活事項</span></div>
           <span className="dsec-count">{lifeTasks.length} 項</span>
         </div>
       </div>
-      {lifeTasks.length===0 ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',marginBottom:8}}>無生活事項</div> : lifeTasks.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)}
+      {lifeTasks.length===0
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',marginBottom:8}}>無生活事項</div>
+        : lifeTasks.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)
+      }
+
+      {/* 📝 學習筆記 */}
       <div style={{background:'linear-gradient(90deg,#F0ECFF,#F8F5FF)',marginTop:10}}>
         <div className="dsec-hdr">
-          <div className="dsec-left"><span style={{fontSize:14}}>📝</span><span className="dsec-title" style={{color:'#5B3EA0'}}>學習筆記</span></div>
+          <div className="dsec-left">
+            <span style={{fontSize:14}}>📝</span>
+            <span className="dsec-title" style={{color:'#5B3EA0'}}>學習筆記</span>
+          </div>
           <div style={{display:'flex',gap:12,alignItems:'center'}}>
             <span className="dsec-count">{(notes||[]).length} 條</span>
             <span onClick={onViewNotes} style={{fontSize:12,color:'#667eea',cursor:'pointer',fontWeight:500}}>全部 ›</span>
@@ -631,23 +926,40 @@ const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNote
           </div>
         </div>
       </div>
-      {(!notes||notes.length===0) ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',marginBottom:8}}>點 ＋ 新增第一條學習筆記</div> : notes.slice(0,3).map((n,i) => (<div key={n.id} className="dash-notes-row" onClick={onViewNotes}>{n.category && <div className="note-cat-tag">{n.category}</div>}<div className="note-conclusion-text">{n.conclusion}</div>{n.tags && <div className="note-tags-text">{n.tags}</div>}</div>))}
+      {(!notes||notes.length===0)
+        ? <div style={{background:'#fff',padding:'10px 16px',fontSize:13,color:'#bbb',marginBottom:8}}>點 ＋ 新增第一條學習筆記</div>
+        : notes.slice(0,3).map((n,i) => (
+            <div key={n.id} className="dash-notes-row" onClick={onViewNotes}>
+              {n.category && <div className="note-cat-tag">{n.category}</div>}
+              <div className="note-conclusion-text">{n.conclusion}</div>
+              {n.tags && <div className="note-tags-text">{n.tags}</div>}
+            </div>
+          ))
+      }
       <div style={{height:8}}/>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════
-// MEETINGS PAGE
+// ⑥ MEETINGS PAGE
 // ════════════════════════════════════════════════════
 const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
   const [expanded, setExpanded] = useState(null);
+  // 每分鐘更新一次，讓時間判斷即時反映
   const [now, setNow] = useState(new Date());
-  useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer); }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div>
       <div className="date-bar">
-        <div><span className="date-main">{todayDisplay()}</span><span className="date-wd">{todayWD()}</span></div>
+        <div>
+          <span className="date-main">{todayDisplay()}</span>
+          <span className="date-wd">{todayWD()}</span>
+        </div>
         <span className="date-right" onClick={onRefresh} style={{cursor:'pointer',color:'var(--blue)'}}>⟳ 重新同步</span>
       </div>
       {loading && <div className="spinner">同步中...</div>}
@@ -655,18 +967,52 @@ const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
       {meetings.map((m, i) => {
         const over = isMeetingOver(m);
         const st = (m.startUTC ? utcToLocalTime(m.startUTC) : m.startTime) || m.startTime;
-        const et = (m.endUTC ? utcToLocalTime(m.endUTC) : m.endTime) || m.endTime;
+        const et = (m.endUTC   ? utcToLocalTime(m.endUTC)   : m.endTime)   || m.endTime;
         return (
           <div key={i}>
-            <div onClick={() => setExpanded(expanded===i?null:i)} style={{background:over?'#f8f8f8':'#fff',padding:'12px 16px',borderBottom:'0.5px solid #f2f2f2',display:'flex',alignItems:'center',gap:10,cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
-              <div style={{width:22,height:22,borderRadius:'50%',flexShrink:0,background:over?'#ddd':'#1D9E75',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                {over ? <span style={{color:'#fff',fontSize:13,lineHeight:1}}>✓</span> : <span style={{width:7,height:7,borderRadius:'50%',background:'#fff',display:'block'}}/>}
+            <div
+              onClick={() => setExpanded(expanded===i?null:i)}
+              style={{
+                background: over ? '#f8f8f8' : '#fff',
+                padding:'12px 16px', borderBottom:'0.5px solid #f2f2f2',
+                display:'flex', alignItems:'center', gap:10, cursor:'pointer',
+                WebkitTapHighlightColor:'transparent',
+              }}
+            >
+              {/* 狀態圓點 */}
+              <div style={{
+                width:22, height:22, borderRadius:'50%', flexShrink:0,
+                background: over ? '#ddd' : '#1D9E75',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                {over
+                  ? <span style={{color:'#fff',fontSize:13,lineHeight:1}}>✓</span>
+                  : <span style={{width:7,height:7,borderRadius:'50%',background:'#fff',display:'block'}}/>
+                }
               </div>
-              <span style={{fontSize:12,width:78,flexShrink:0,whiteSpace:'nowrap',color:over?'#ccc':'#555',fontWeight:over?400:500,textDecoration:over?'line-through':'none'}}>{st}{et?'–'+et:''}</span>
-              <span style={{flex:1,fontSize:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:over?'#bbb':'#1a1a1a',fontWeight:over?400:600,textDecoration:over?'line-through':'none'}}>{m.title}</span>
-              <span style={{fontSize:18,color:'#ccc',flexShrink:0,padding:'0 4px'}}>{expanded===i?'∨':'›'}</span>
+              {/* 時間 */}
+              <span style={{
+                fontSize:12, width:78, flexShrink:0, whiteSpace:'nowrap',
+                color: over ? '#ccc' : '#555', fontWeight: over ? 400 : 500,
+                textDecoration: over ? 'line-through' : 'none',
+              }}>{st}{et?'–'+et:''}</span>
+              {/* 標題 */}
+              <span style={{
+                flex:1, fontSize:14,
+                whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                color: over ? '#bbb' : '#1a1a1a',
+                fontWeight: over ? 400 : 600,
+                textDecoration: over ? 'line-through' : 'none',
+              }}>{m.title}</span>
+              <span style={{fontSize:18,color:'#ccc',flexShrink:0,padding:'0 4px'}}>
+                {expanded===i?'∨':'›'}
+              </span>
             </div>
-            {expanded === i && <div style={{background:'#f9f9f9',padding:'10px 16px 10px 52px',borderBottom:'0.5px solid #f2f2f2',fontSize:13,color:'#666',lineHeight:1.7}}>{m.location ? <div>📍 {m.location}</div> : <div style={{color:'#bbb'}}>無詳細資訊</div>}</div>}
+            {expanded === i && (
+              <div style={{background:'#f9f9f9',padding:'10px 16px 10px 52px',borderBottom:'0.5px solid #f2f2f2',fontSize:13,color:'#666',lineHeight:1.7}}>
+                {m.location ? <div>📍 {m.location}</div> : <div style={{color:'#bbb'}}>無詳細資訊</div>}
+              </div>
+            )}
           </div>
         );
       })}
@@ -675,7 +1021,7 @@ const MeetingsPage = ({ meetings, setMeetings, onRefresh, loading }) => {
 };
 
 // ════════════════════════════════════════════════════
-// TASK FORM PAGE
+// ⑦ TASK FORM PAGE (新增 / 編輯)
 // ════════════════════════════════════════════════════
 const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultCategory = '工作' }) => {
   const blank = { priority:'P1', title:'', owner:'', dueDate:'', completionDate:'', progress:'', reflection:'', createdDate: todayStr(), category: defaultCategory, next_step:'' };
@@ -684,66 +1030,92 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   const [analyzing, setAnalyzing] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [allNotes] = useState(() => getNotes());
-  const relatedNotes = useMemo(() => matchNotes(allNotes, form.title, form.category), [allNotes, form.title, form.category]);
+  const relatedNotes = useMemo(
+    () => matchNotes(allNotes, form.title, form.category),
+    [allNotes, form.title, form.category]
+  );
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const [aiEngine, setAiEngine] = useState(localStorage.getItem('ai_engine') || 'gemini');
-  const [inputMode, setInputMode] = useState('image'); // 'image' | 'text'
-  const [pendingText, setPendingText] = useState('');
 
-  const analyzeText = useCallback(async () => {
-    if (!pendingText.trim() || analyzing) return;
-    const engine = aiEngine;
-    const key = engine === 'claude' ? localStorage.getItem('claude_key')||'' : localStorage.getItem('gemini_key')||'';
-    if (!key) { alert(`請先在 ⚙ 設定 ${engine==='claude'?'Claude':'Gemini'} API Key`); return; }
-    setAnalyzing(true);
-    try {
-      const result = engine === 'claude'
-        ? await analyzeTextWithClaude(pendingText, key)
-        : await analyzeTextWithGemini(pendingText, key);
-      applyAIResult(result);
-      setPendingText('');
-    } catch(err) { alert('AI 分析失敗：' + err.message); }
-    setAnalyzing(false);
-  }, [pendingText, analyzing, applyAIResult, aiEngine]);
-
+  // ── 核心：處理圖片/PDF/HTML（按鈕 / 貼上 / 拖曳共用）──
   const processFile = useCallback(async (file) => {
-    const isHTML = file.type === 'text/html' || file.type === 'message/rfc822' || /\.(html?|mht|eml)$/i.test(file.name);
+    const key = localStorage.getItem('gemini_key') || '';
+    if (!key) { alert('請先點右上角 ⚙ 設定 Gemini API Key'); return; }
+
+    const isHTML = file.type === 'text/html' || file.type === 'message/rfc822'
+      || /\.(html?|mht|eml)$/i.test(file.name);
+
     setAnalyzing(true);
+
     if (isHTML) {
       try {
         const rawText = await file.text();
-        const clean = rawText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/\s{2,}/g,'\n').trim().slice(0,10000);
+        const clean = rawText
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/\s{2,}/g, '\n').trim()
+          .slice(0, 6000);
         const engine = localStorage.getItem('ai_engine') || 'gemini';
-        const result = engine === 'claude' ? await analyzeTextWithClaude(clean, localStorage.getItem('claude_key')||'') : await analyzeTextWithGemini(clean, localStorage.getItem('gemini_key')||'');
+        const result = engine === 'claude'
+          ? await analyzeTextWithClaude(clean, localStorage.getItem('claude_key') || '')
+          : await analyzeTextWithGemini(clean, localStorage.getItem('gemini_key') || '');
         applyAIResult(result);
-      } catch(err) { alert('Email 分析失敗：' + err.message); }
-      setAnalyzing(false); return;
+      } catch(err) {
+        alert('Email 分析失敗：' + err.message);
+      }
+      setAnalyzing(false);
+      return;
     }
+
     const reader = new FileReader();
     reader.onload = async ev => {
       try {
         const base64 = ev.target.result.split(',')[1];
         const engine = localStorage.getItem('ai_engine') || 'gemini';
-        const result = engine === 'claude' ? await analyzeWithClaude(base64, file.type||'image/jpeg') : await analyzeWithGemini(base64, file.type||'image/jpeg');
+        const result = engine === 'claude'
+          ? await analyzeWithClaude(base64, file.type || 'image/jpeg')
+          : await analyzeWithGemini(base64, file.type || 'image/jpeg');
         applyAIResult(result);
-      } catch(err) { alert(err.message === 'NOKEY' ? '請先在 ⚙ 設定 Gemini API Key' : 'AI 分析失敗：' + err.message); }
+      } catch(err) {
+        alert(err.message === 'NOKEY' ? '請先在 ⚙ 設定 Gemini API Key' : 'AI 分析失敗：' + err.message);
+      }
       setAnalyzing(false);
     };
     reader.readAsDataURL(file);
   }, [mode, form.progress]);
 
+  // AI 結果套用（新增模式 vs 編輯追加）
   const applyAIResult = useCallback((result) => {
     if (mode === 'add') {
-      setForm(f => ({ ...f, priority:result.priority||f.priority, title:result.title||f.title, owner:result.owner||f.owner, dueDate:result.dueDate||f.dueDate, category:result.category||f.category, progress:result.progress||f.progress, next_step:result.next_step||f.next_step }));
+      setForm(f => ({
+        ...f,
+        priority:  result.priority  || f.priority,
+        title:     result.title     || f.title,
+        owner:     result.owner     || f.owner,
+        dueDate:   result.dueDate   || f.dueDate,
+        category:  result.category  || f.category,
+        progress:  result.progress  || f.progress,
+        next_step: result.next_step || f.next_step,
+      }));
     } else {
       const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
       const entry = `[${dateStr} AI更新]\n${result.progress}`;
-      setForm(f => ({ ...f, progress:f.progress?f.progress+'\n\n'+entry:entry, next_step:result.next_step||f.next_step }));
+      setForm(f => ({
+        ...f,
+        progress:  f.progress ? f.progress + '\n\n' + entry : entry,
+        next_step: result.next_step || f.next_step,
+      }));
     }
   }, [mode]);
 
+  // ── 多圖 pending 狀態 ──
   const [pendingImages, setPendingImages] = useState([]);
-  const [dragging, setDragging] = useState(false);
+  const [pendingText,   setPendingText]   = useState('');
+  const [inputMode,     setInputMode]     = useState('image'); // 'image' | 'text'
+  const [dragging,      setDragging]      = useState(false);
   const pasteInputRef = useRef(null);
 
   const addToPending = useCallback((file) => {
@@ -752,7 +1124,13 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
     setPendingImages(prev => {
       if (prev.length >= 3) { alert('最多同時分析 3 張'); return prev; }
       const reader = new FileReader();
-      reader.onload = ev => { const dataUrl = ev.target.result; setPendingImages(p => [...p, { base64:dataUrl.split(',')[1], type:file.type||'image/jpeg', preview:file.type==='application/pdf'?null:dataUrl }]); };
+      reader.onload = ev => {
+        const dataUrl = ev.target.result;
+        setPendingImages(p => [...p, {
+          base64: dataUrl.split(',')[1], type: file.type||'image/jpeg',
+          preview: file.type==='application/pdf' ? null : dataUrl,
+        }]);
+      };
       reader.readAsDataURL(file);
       return prev;
     });
@@ -761,121 +1139,215 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   const analyzeAll = useCallback(async () => {
     if (!pendingImages.length || analyzing) return;
     const engine = aiEngine;
-    const key = engine === 'claude' ? localStorage.getItem('claude_key')||'' : localStorage.getItem('gemini_key')||'';
-    if (!key) { alert(`請先在 ⚙ 設定 ${engine==='claude'?'Claude':'Gemini'} API Key`); return; }
+    const key = engine === 'claude'
+      ? localStorage.getItem('claude_key') || ''
+      : localStorage.getItem('gemini_key') || '';
+    if (!key) { alert(`請先在 ⚙ 設定 ${engine === 'claude' ? 'Claude' : 'Gemini'} API Key`); return; }
     setAnalyzing(true);
     try {
-      const result = engine === 'claude' ? await analyzeMultipleWithClaude(pendingImages, key) : await analyzeMultipleWithGemini(pendingImages, key);
-      applyAIResult(result); setPendingImages([]);
+      const result = engine === 'claude'
+        ? await analyzeMultipleWithClaude(pendingImages, key)
+        : await analyzeMultipleWithGemini(pendingImages, key);
+      applyAIResult(result);
+      setPendingImages([]);
     } catch(err) { alert('AI 分析失敗：' + err.message); }
     setAnalyzing(false);
   }, [pendingImages, analyzing, applyAIResult, aiEngine]);
 
+  // 分析文字（電腦貼上 Email / 文件內容）
+  const analyzeText = useCallback(async () => {
+    if (!pendingText.trim() || analyzing) return;
+    const engine = aiEngine;
+    const key = engine === 'claude'
+      ? localStorage.getItem('claude_key') || ''
+      : localStorage.getItem('gemini_key') || '';
+    if (!key) { alert(`請先在 ⚙ 設定 ${engine === 'claude' ? 'Claude' : 'Gemini'} API Key`); return; }
+    setAnalyzing(true);
+    try {
+      const result = engine === 'claude'
+        ? await analyzeTextWithClaude(pendingText, key)
+        : await analyzeTextWithGemini(pendingText, key);
+      if (mode === 'add') {
+        applyAIResult(result);
+        setPendingText('');
+      } else {
+        const dateStr = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+        const entry = `[${dateStr} AI更新]\n${result.progress}`;
+        setForm(f => ({ ...f, progress: f.progress ? f.progress + '\n\n' + entry : entry, next_step: result.next_step || f.next_step }));
+        setPendingText('');
+      }
+    } catch(err) { alert('AI 分析失敗：' + err.message); }
+    setAnalyzing(false);
+  }, [pendingText, analyzing, applyAIResult, aiEngine, mode]);
+
   useEffect(() => {
     const onPaste = (e) => {
       if (analyzing) return;
-      const img = Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/'));
-      if (!img) return; e.preventDefault(); addToPending(img.getAsFile());
+      // 優先偵測圖片
+      const img = Array.from(e.clipboardData?.items||[]).find(i => i.type.startsWith('image/'));
+      if (img) {
+        e.preventDefault();
+        addToPending(img.getAsFile());
+        setInputMode('image');
+        return;
+      }
+      // 偵測文字（電腦 Ctrl+V）
+      const text = e.clipboardData?.getData('text/plain') || '';
+      if (text.trim().length > 15) {
+        e.preventDefault();
+        setPendingText(p => p ? p + '\n\n---\n' + text.trim() : text.trim());
+        setInputMode('text');
+      }
     };
     document.addEventListener('paste', onPaste);
     return () => document.removeEventListener('paste', onPaste);
   }, [analyzing, addToPending]);
 
-  const handleDrop = (e) => { e.preventDefault(); setDragging(false); if(!analyzing) Array.from(e.dataTransfer.files).forEach(addToPending); };
-  const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const handleDrop  = (e) => { e.preventDefault(); setDragging(false); if(!analyzing) Array.from(e.dataTransfer.files).forEach(addToPending); };
+  const handleDragOver  = (e) => { e.preventDefault(); setDragging(true); };
   const handleDragLeave = (e) => { if(!e.currentTarget.contains(e.relatedTarget)) setDragging(false); };
+
+  // AI 引擎快速切換（同步 localStorage）
+  const [aiEngine, setAiEngine] = useState(localStorage.getItem('ai_engine') || 'gemini');
+  const toggleEngine = () => {
+    const next = aiEngine === 'gemini' ? 'claude' : 'gemini';
+    setAiEngine(next);
+    localStorage.setItem('ai_engine', next);
+  };
 
   const handleSave = async () => {
     if (!form.title.trim()) { alert('請填入追蹤事項'); return; }
     setSaving(true);
-    try { await onSave(form); } finally { setSaving(false); }
+    try { await onSave(form); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div className="form-wrap" onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave} style={{position:'relative'}}>
-      {dragging && <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:999,background:'rgba(102,126,234,0.15)',border:'3px dashed #667eea',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}><div style={{background:'#667eea',color:'#fff',padding:'16px 32px',borderRadius:12,fontSize:16,fontWeight:600}}>📎 放開加入分析</div></div>}
+    <div className="form-wrap" onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
+      style={{position:'relative'}}>
+      {dragging && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:999,
+          background:'rgba(102,126,234,0.15)',border:'3px dashed #667eea',
+          display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+          <div style={{background:'#667eea',color:'#fff',padding:'16px 32px',borderRadius:12,fontSize:16,fontWeight:600}}>
+            📎 放開加入分析
+          </div>
+        </div>
+      )}
       <div className="page-hdr">
         <span className="back-btn" onClick={onBack}>‹</span>
-        <span className="page-hdr-title">{mode==='add'?'新增任務':'編輯任務'}</span>
+        <span className="page-hdr-title">{mode === 'add' ? '新增任務' : '編輯任務'}</span>
         <span></span>
       </div>
+
+      {/* ── 輸入框（新增模式）── */}
       {mode === 'add' && (
         <div style={{padding:'12px 16px 8px',background:'var(--card)',marginBottom:8}}>
-          <div style={{display:'flex',gap:6,marginBottom:10}}>
-            {[{id:'gemini',label:'G Gemini',color:'#4285F4'},{id:'claude',label:'C Claude',color:'#D97706'}].map(e => (
-              <button key={e.id} onClick={() => { setAiEngine(e.id); localStorage.setItem('ai_engine', e.id); }}
-                style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:12,fontWeight:600,border:aiEngine===e.id?'none':'1px solid var(--border)',background:aiEngine===e.id?e.color:'#f7f7f7',color:aiEngine===e.id?'#fff':'#999',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
-                {e.label} {aiEngine===e.id?'✓':''}
-              </button>
-            ))}
-          </div>
-          {/* 模式切換：圖片 / 文字 */}
-          <div style={{display:'flex',gap:6,marginBottom:10}}>
-            {[{id:'image',label:'📎 圖片/PDF'},{id:'text',label:'📝 文字貼上'}].map(m => (
-              <button key={m.id} onClick={() => setInputMode(m.id)}
-                style={{flex:1,padding:'6px 0',borderRadius:8,fontSize:12,fontWeight:600,
-                  border:inputMode===m.id?'none':'1px solid var(--border)',
-                  background:inputMode===m.id?'#667eea':'#f7f7f7',
-                  color:inputMode===m.id?'#fff':'#999',
-                  cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
-                {m.label}
-              </button>
+
+          {/* 引擎切換 */}
+          <div style={{display:'flex',gap:6,marginBottom:8}}>
+            {[{id:'gemini',label:'G Gemini',color:'#4285F4'},{id:'claude',label:'C Claude',color:'#D97706'}].map(e=>(
+              <button key={e.id} onClick={()=>{setAiEngine(e.id);localStorage.setItem('ai_engine',e.id);}} style={{
+                flex:1,padding:'6px 0',borderRadius:8,fontSize:12,fontWeight:600,
+                border:aiEngine===e.id?'none':'1px solid var(--border)',
+                background:aiEngine===e.id?e.color:'#f7f7f7',
+                color:aiEngine===e.id?'#fff':'#999',
+                cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',
+              }}>{e.label} {aiEngine===e.id?'✓':''}</button>
             ))}
           </div>
 
-          {inputMode === 'text' ? (
-            /* 文字輸入模式 */
-            <div style={{border:'1px solid #C4B5FD',borderRadius:12,background:'#FAFAFF',padding:12}}>
-              <textarea
-                placeholder="貼入 Email 內容、工作說明、任何文字資料..."
-                value={pendingText}
-                onChange={e => setPendingText(e.target.value)}
-                rows={6}
-                style={{width:'100%',border:'none',outline:'none',fontSize:13,background:'transparent',
-                  color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}
-              />
-              {pendingText.trim() && (
-                <button className="ai-fill-btn" onClick={analyzeText} disabled={analyzing} style={{margin:'8px 0 0'}}>
-                  <span>{analyzing?'🤖':'✨'}</span>
-                  <span>{analyzing?'AI 分析中...':'AI 分析文字'}</span>
-                </button>
-              )}
-              {!pendingText.trim() && (
-                <div style={{fontSize:11,color:'#bbb',textAlign:'center',paddingTop:4}}>
-                  Ctrl+V 貼上，或直接輸入文字
+          {/* 輸入模式切換 */}
+          <div style={{display:'flex',gap:6,marginBottom:8}}>
+            {[{id:'image',label:'📷 圖片'},{id:'text',label:'📝 文字'}].map(m=>(
+              <button key={m.id} onClick={()=>setInputMode(m.id)} style={{
+                flex:1,padding:'6px 0',borderRadius:8,fontSize:12,fontWeight:500,
+                border:inputMode===m.id?'none':'1px solid var(--border)',
+                background:inputMode===m.id?'#1a1a1a':'#f7f7f7',
+                color:inputMode===m.id?'#fff':'#888',
+                cursor:'pointer',fontFamily:'inherit',
+              }}>{m.label}</button>
+            ))}
+          </div>
+
+          {/* ── 圖片模式 ── */}
+          {inputMode==='image' && (
+            <div>
+              {pendingImages.length===0 ? (
+                <div className="paste-zone-empty" onClick={()=>pasteInputRef.current?.click()}>
+                  <div style={{fontSize:24,marginBottom:4}}>📎</div>
+                  <div style={{fontSize:13,fontWeight:600,color:'#667eea'}}>拖入 / Ctrl+V / 點擊選圖</div>
+                  <div style={{fontSize:11,color:'#bbb',marginTop:3}}>圖片、PDF、HTML ｜ 最多 3 張</div>
+                </div>
+              ) : (
+                <div className="paste-zone-filled">
+                  <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10,flexWrap:'wrap'}}>
+                    {pendingImages.map((img,i)=>(
+                      <div key={i} className="img-thumb-wrap">
+                        {img.preview
+                          ?<img src={img.preview} className="img-thumb" alt={`img${i+1}`}/>
+                          :<div className="img-thumb" style={{display:'flex',alignItems:'center',justifyContent:'center',background:'#F0ECFF',fontSize:24}}>📄</div>
+                        }
+                        <div className="img-thumb-del" onClick={()=>setPendingImages(p=>p.filter((_,j)=>j!==i))}>×</div>
+                      </div>
+                    ))}
+                    {pendingImages.length<3&&<div className="img-thumb-add" onClick={()=>pasteInputRef.current?.click()}>＋</div>}
+                  </div>
+                  <button className="ai-fill-btn" onClick={analyzeAll} disabled={analyzing} style={{margin:0}}>
+                    <span>{analyzing?'🤖':'✨'}</span>
+                    <span>{analyzing?'AI 分析中...':`AI 分析（${pendingImages.length} 張）`}</span>
+                  </button>
                 </div>
               )}
-            </div>
-          ) : pendingImages.length === 0 ? (
-            <div className="paste-zone-empty" onClick={() => pasteInputRef.current?.click()}>
-              <div style={{fontSize:28,marginBottom:6}}>📎</div>
-              <div style={{fontSize:13,fontWeight:600,color:'#667eea'}}>拖入 / Ctrl+V 貼上 / 點擊選取</div>
-              <div style={{fontSize:11,color:'#bbb',marginTop:4}}>截圖、圖片、PDF、HTML ｜ 最多 3 張一起分析</div>
-            </div>
-          ) : (
-            <div className="paste-zone-filled">
-              <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10,flexWrap:'wrap'}}>
-                {pendingImages.map((img,i) => (
-                  <div key={i} className="img-thumb-wrap">
-                    {img.preview ? <img src={img.preview} className="img-thumb" alt={`img${i+1}`}/> : <div className="img-thumb" style={{display:'flex',alignItems:'center',justifyContent:'center',background:'#F0ECFF',fontSize:28}}>📄</div>}
-                    <div className="img-thumb-del" onClick={() => setPendingImages(p=>p.filter((_,j)=>j!==i))}>×</div>
-                  </div>
-                ))}
-                {pendingImages.length < 3 && <div className="img-thumb-add" onClick={() => pasteInputRef.current?.click()}>＋</div>}
+              <div style={{fontSize:10,color:'#f59e0b',marginTop:5,textAlign:'center'}}>
+                ⚠️ 每張圖約 500 token｜電腦建議改用「📝 文字模式」省 80%
               </div>
-              <button className="ai-fill-btn" onClick={analyzeAll} disabled={analyzing} style={{margin:0}}>
+            </div>
+          )}
+
+          {/* ── 文字模式 ── */}
+          {inputMode==='text' && (
+            <div>
+              <textarea
+                placeholder={'電腦：Ctrl+V 貼上 Email 或任何文字\n或直接輸入任務描述...\n\n✅ 文字模式比圖片省 80% token，分析更快'}
+                value={pendingText}
+                onChange={e=>setPendingText(e.target.value)}
+                rows={6}
+                style={{width:'100%',border:'1px solid #D4CCFF',borderRadius:10,
+                  padding:'10px 12px',fontSize:13,fontFamily:'inherit',
+                  outline:'none',resize:'none',lineHeight:1.7,
+                  background:'#FAFAFF',color:'var(--text)',}}
+              />
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:4}}>
+                <span style={{fontSize:10,color:'#4CAF50',fontWeight:500}}>
+                  ✅ 約 {Math.max(30,Math.round((pendingText||'').length/3))} token（圖片約 500 token）
+                </span>
+                {pendingText&&<span onClick={()=>setPendingText('')} style={{fontSize:11,color:'#bbb',cursor:'pointer'}}>清除</span>}
+              </div>
+              <button className="ai-fill-btn" onClick={analyzeText}
+                disabled={!pendingText.trim()||analyzing}
+                style={{margin:'8px 0 0',opacity:(!pendingText.trim()||analyzing)?0.5:1}}>
                 <span>{analyzing?'🤖':'✨'}</span>
-                <span>{analyzing?'AI 分析中...':`AI 分析（${pendingImages.length} 張）`}</span>
+                <span>{analyzing?'AI 分析中...':'AI 分析文字'}</span>
               </button>
             </div>
           )}
-          <input ref={pasteInputRef} type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" multiple style={{display:'none'}} onChange={e => { Array.from(e.target.files).forEach(addToPending); e.target.value=''; }}/>
+
+          <input ref={pasteInputRef} type="file"
+            accept="image/*,.pdf,.html,.htm,.mht,.eml"
+            multiple style={{display:'none'}}
+            onChange={e=>{Array.from(e.target.files).forEach(addToPending);e.target.value='';}}/>
         </div>
       )}
+
+      {/* 相關筆記提醒 */}
       {relatedNotes.length > 0 && (
         <div className="note-reminder-bar" style={{marginBottom:8}}>
-          <div onClick={() => setNoteExpanded(e=>!e)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}}>
-            <span style={{fontSize:12,fontWeight:600,color:'#5B3EA0'}}>💡 相關筆記提醒（{relatedNotes.length} 條）</span>
+          <div onClick={() => setNoteExpanded(e=>!e)}
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}}>
+            <span style={{fontSize:12,fontWeight:600,color:'#5B3EA0'}}>
+              💡 相關筆記提醒（{relatedNotes.length} 條）
+            </span>
             <span style={{fontSize:14,color:'#667eea'}}>{noteExpanded?'∧':'∨'}</span>
           </div>
           {noteExpanded && relatedNotes.map((n,i) => (
@@ -887,77 +1359,120 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
           ))}
         </div>
       )}
+
       <div className="form-section">
         <div className="form-row">
           <span className="f-label">類別</span>
           <div style={{display:'flex',gap:8,flex:1}}>
             {['工作','生活'].map(cat => (
-              <button key={cat} onClick={() => set('category',cat)} style={{flex:1,padding:'6px 0',borderRadius:7,border:form.category===cat?'none':'0.5px solid var(--border)',background:form.category===cat?(cat==='工作'?'#185FA5':'#3B6D11'):'#fff',color:form.category===cat?'#fff':'var(--text-muted)',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>{cat==='工作'?'💼 工作':'🏠 生活'}</button>
+              <button key={cat} onClick={() => set('category', cat)} style={{
+                flex:1, padding:'6px 0', borderRadius:7,
+                border: form.category===cat ? 'none' : '0.5px solid var(--border)',
+                background: form.category===cat ? (cat==='工作'?'#185FA5':'#3B6D11') : '#fff',
+                color: form.category===cat ? '#fff' : 'var(--text-muted)',
+                fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:'inherit',
+              }}>{cat==='工作'?'💼 工作':'🏠 生活'}</button>
             ))}
           </div>
         </div>
         <div className="form-row">
           <span className="f-label">優先等級</span>
-          <select value={form.priority} onChange={e => set('priority',e.target.value)}>
-            <option value="P1">P1 極急</option><option value="P2">P2 重要</option><option value="P3">P3 一般</option><option value="P4">P4 備忘</option>
+          <select value={form.priority} onChange={e => set('priority', e.target.value)}>
+            <option value="P1">P1 極急</option>
+            <option value="P2">P2 重要</option>
+            <option value="P3">P3 一般</option>
+            <option value="P4">P4 備忘</option>
           </select>
         </div>
         <div className="form-row">
           <span className="f-label">追蹤事項</span>
-          <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title',e.target.value)}/>
+          <input type="text" placeholder="任務標題" value={form.title} onChange={e => set('title', e.target.value)} />
         </div>
       </div>
+
       <div className="form-section">
         <div className="form-row">
           <span className="f-label">負責人</span>
-          <select value={form.owner} onChange={e => set('owner',e.target.value)}>
+          <select value={form.owner} onChange={e => set('owner', e.target.value)}>
             <option value="">— 選擇 —</option>
             {members.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
-        <div className="form-row"><span className="f-label">預定完成日</span><input type="date" value={form.dueDate} onChange={e => set('dueDate',e.target.value)}/></div>
-        <div className="form-row"><span className="f-label">實際完成日</span><input type="date" value={form.completionDate} onChange={e => set('completionDate',e.target.value)}/></div>
+        <div className="form-row">
+          <span className="f-label">預定完成日</span>
+          <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+        </div>
+        <div className="form-row">
+          <span className="f-label">實際完成日</span>
+          <input type="date" value={form.completionDate} onChange={e => set('completionDate', e.target.value)} />
+        </div>
       </div>
+
       <div className="form-section">
         <div className="form-textarea-wrap">
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
             <label style={{marginBottom:0}}>處理過程履歷</label>
             {mode === 'edit' && (
-              <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}} onDrop={handleDrop} onDragOver={handleDragOver}>
+              <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}
+                onDrop={handleDrop} onDragOver={handleDragOver}>
                 {analyzing?'🤖 分析中...':'🤖 AI追加（拍照/貼上）'}
-                <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing} onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
+                <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing}
+                  onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
               </label>
             )}
           </div>
-          <textarea placeholder="AI 自動填入，或手動記錄處理過程..." value={form.progress} rows={8} onChange={e => set('progress',e.target.value)} style={{width:'100%',border:'none',outline:'none',fontSize:13,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.8}}/>
+          <textarea
+            placeholder="AI 自動填入，或手動記錄處理過程..."
+            value={form.progress} rows={8}
+            onChange={e => set('progress', e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:13,background:'transparent',
+              color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.8}}
+          />
         </div>
       </div>
+
+      {/* AI 下一步建議 */}
       <div className="form-section">
         <div className="form-row" style={{alignItems:'flex-start',gap:8}}>
           <span className="f-label" style={{paddingTop:4,color:'#667eea',fontWeight:600}}>🔜 下一步</span>
-          <input type="text" placeholder="AI 自動產生，或手動輸入..." value={form.next_step} onChange={e => set('next_step',e.target.value)} style={{fontSize:13,color:'#185FA5',fontWeight:500}}/>
+          <input type="text"
+            placeholder="AI 自動產生，或手動輸入..."
+            value={form.next_step}
+            onChange={e => set('next_step', e.target.value)}
+            style={{fontSize:13,color:'#185FA5',fontWeight:500}}
+          />
         </div>
         {form.next_step && <div style={{padding:'0 16px 8px',fontSize:11,color:'#bbb'}}>此欄內容將顯示在首頁任務列表下方</div>}
       </div>
+
       <div className="form-section">
         <div className="form-textarea-wrap">
           <label>結案心得</label>
-          <textarea placeholder="結案後的心得與改善方向..." value={form.reflection} rows={3} onChange={e => set('reflection',e.target.value)}/>
+          <textarea placeholder="結案後的心得與改善方向..." value={form.reflection} rows={3}
+            onChange={e => set('reflection', e.target.value)} />
         </div>
       </div>
+
       <div className="form-section">
-        <div className="form-row"><span className="f-label">立案日期</span><input type="date" value={form.createdDate||todayStr()} onChange={e => set('createdDate',e.target.value)}/></div>
+        <div className="form-row">
+          <span className="f-label">立案日期</span>
+          <input type="date" value={form.createdDate||todayStr()} onChange={e => set('createdDate', e.target.value)} />
+        </div>
       </div>
+
       <div className="btn-row">
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{flex:2}}>{saving?'儲存中...':'存檔'}</button>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{flex:2}}>
+          {saving?'儲存中...':'存檔'}
+        </button>
         <button className="btn btn-secondary" onClick={onBack} style={{flex:1}}>取消</button>
       </div>
     </div>
   );
 };
 
+
 // ════════════════════════════════════════════════════
-// TASK DETAIL PAGE
+// ⑧ TASK DETAIL PAGE
 // ════════════════════════════════════════════════════
 const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed, onDelete, isHistory = false }) => {
   const [editMode, setEditMode] = useState(false);
@@ -966,9 +1481,12 @@ const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed, onDelete, is
   const overdue = isOverdue(current.dueDate);
 
   const handleSave = async (data) => {
+    // 確保完整欄位都傳給 GAS，避免部分欄位（如結案心得）被清空
     const fullData = { ...current, ...data };
     await api.updateTask(current.id, fullData);
-    setCurrent(fullData); onSaved(current.id, fullData); setEditMode(false);
+    setCurrent(fullData);
+    onSaved(current.id, fullData);
+    setEditMode(false);
   };
 
   const handleClose = async () => {
@@ -980,45 +1498,108 @@ const TaskDetailPage = ({ task, members, onBack, onSaved, onClosed, onDelete, is
       onClosed(current.id, { ...current, completionDate: closeDate });
     } catch(e) {
       setClosing(false);
-      alert(e.name==='AbortError' ? '⚠ 連線逾時（15秒），請確認 Apps Script 已部署且網址正確' : '⚠ 結案失敗：' + e.message);
+      const msg = e.name === 'AbortError'
+        ? '⚠ 連線逾時（15秒），請確認 Apps Script 已部署且網址正確'
+        : '⚠ 結案失敗：' + e.message;
+      alert(msg);
     }
   };
 
-  if (editMode) return (<TaskFormPage initial={current} members={members} onBack={() => setEditMode(false)} onSave={handleSave} mode="edit"/>);
+  if (editMode) return (
+    <TaskFormPage
+      initial={current}
+      members={members}
+      onBack={() => setEditMode(false)}
+      onSave={handleSave}
+      mode="edit"
+    />
+  );
 
   return (
     <div className="detail-wrap">
       <div className="page-hdr">
         <span className="back-btn" onClick={onBack}>‹</span>
         <div style={{flex:1,display:'flex',alignItems:'center',gap:8,overflow:'hidden'}}>
-          <PBadge level={current.priority}/>
-          <span style={{fontSize:15,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{current.title}</span>
+          <PBadge level={current.priority} />
+          <span style={{fontSize:15,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {current.title}
+          </span>
         </div>
         <span className="hdr-action" onClick={() => setEditMode(true)}>編輯</span>
       </div>
+
       <div className="detail-block">
         <div className="detail-meta">
-          <div className="detail-field"><div className="df-label">優先等級</div><div className={`df-value ${pInfo(current.priority).text}`}>{current.priority} {pInfo(current.priority).label}</div></div>
-          <div className="detail-field"><div className="df-label">負責人</div><div className="df-value">{current.owner||'—'}</div></div>
-          <div className="detail-field"><div className="df-label">預定完成日</div><div className="df-value" style={{display:'flex',alignItems:'center',gap:6}}><span style={{color:overdue?'var(--red)':'inherit'}}>{fmtFull(current.dueDate)}</span>{overdue && <span className="overdue-pill">逾期</span>}</div></div>
-          {current.completionDate && <div className="detail-field"><div className="df-label">實際完成日</div><div className="df-value">{fmtFull(current.completionDate)}</div></div>}
-          <div className="detail-field"><div className="df-label">立案日期</div><div className="df-value">{fmtFull(current.createdDate)}</div></div>
+          <div className="detail-field">
+            <div className="df-label">優先等級</div>
+            <div className={`df-value ${pInfo(current.priority).text}`}>{current.priority} {pInfo(current.priority).label}</div>
+          </div>
+          <div className="detail-field">
+            <div className="df-label">負責人</div>
+            <div className="df-value">{current.owner || '—'}</div>
+          </div>
+          <div className="detail-field">
+            <div className="df-label">預定完成日</div>
+            <div className="df-value" style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{color: overdue ? 'var(--red)' : 'inherit'}}>{fmtFull(current.dueDate)}</span>
+              {overdue && <span className="overdue-pill">逾期</span>}
+            </div>
+          </div>
+          {current.completionDate && (
+            <div className="detail-field">
+              <div className="df-label">實際完成日</div>
+              <div className="df-value">{fmtFull(current.completionDate)}</div>
+            </div>
+          )}
+          <div className="detail-field">
+            <div className="df-label">立案日期</div>
+            <div className="df-value">{fmtFull(current.createdDate)}</div>
+          </div>
         </div>
       </div>
-      {current.progress ? <div className="detail-block"><div className="detail-text"><div className="dt-label">處理過程履歷</div><div className="dt-value">{current.progress}</div></div></div> : null}
-      {current.reflection ? <div className="detail-block"><div className="detail-text"><div className="dt-label">結案心得</div><div className="dt-value">{current.reflection}</div></div></div> : null}
+
+      {current.progress ? (
+        <div className="detail-block">
+          <div className="detail-text">
+            <div className="dt-label">處理過程履歷</div>
+            <div className="dt-value">{current.progress}</div>
+          </div>
+        </div>
+      ) : null}
+
+      {current.reflection ? (
+        <div className="detail-block">
+          <div className="detail-text">
+            <div className="dt-label">結案心得</div>
+            <div className="dt-value">{current.reflection}</div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="btn-row">
-        {!isHistory && <button className="btn btn-close" onClick={handleClose} disabled={closing}>{closing?'結案中...':'✓ 結案'}</button>}
+        {!isHistory && (
+          <button className="btn btn-close" onClick={handleClose} disabled={closing}>
+            {closing ? '結案中...' : '✓ 結案'}
+          </button>
+        )}
         <button className="btn btn-edit" onClick={() => setEditMode(true)}>編輯</button>
         <button className="btn btn-secondary" onClick={onBack}>返回</button>
       </div>
-      {onDelete && <div style={{padding:'0 16px 20px'}}><button className="btn" style={{width:'100%',background:'#fff',border:'1px solid #E24B4A',color:'#E24B4A'}} onClick={() => onDelete(current.id)}>🗑 刪除此{isHistory?'歷史紀錄':'任務'}</button></div>}
+      {onDelete && (
+        <div style={{padding:'0 16px 20px'}}>
+          <button
+            className="btn"
+            style={{width:'100%',background:'#fff',border:'1px solid #E24B4A',color:'#E24B4A'}}
+            onClick={() => onDelete(current.id)}
+          >🗑 刪除此{isHistory ? '歷史紀錄' : '任務'}</button>
+        </div>
+      )}
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════
-// TASKS PAGE
+// ⑨ TASKS PAGE
 // ════════════════════════════════════════════════════
 const TasksPage = ({ tasks, onTaskClick, onAddTask }) => {
   const [catTab, setCatTab] = useState('工作');
@@ -1026,49 +1607,74 @@ const TasksPage = ({ tasks, onTaskClick, onAddTask }) => {
   return (
     <div>
       <div className="cat-tab-bar">
-        {['工作','生活'].map(cat => <button key={cat} className={`cat-tab-btn${catTab===cat?' active':''}`} onClick={() => setCatTab(cat)}>{cat==='工作'?'💼 工作':'🏠 生活'}</button>)}
+        {['工作','生活'].map(cat => (
+          <button key={cat} className={`cat-tab-btn${catTab===cat?' active':''}`} onClick={() => setCatTab(cat)}>
+            {cat==='工作'?'💼 工作':'🏠 生活'}
+          </button>
+        ))}
       </div>
-      {filtered.length===0 && <div className="empty">無進行中{catTab}任務 🎉</div>}
-      {filtered.map((t,i) => <TaskRow key={i} task={t} onClick={onTaskClick}/>)}
+      {filtered.length === 0 && <div className="empty">無進行中{catTab}任務 🎉</div>}
+      {filtered.map((t, i) => <TaskRow key={i} task={t} onClick={onTaskClick} />)}
       <div className="fab" onClick={() => onAddTask(catTab)}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+          <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/>
+        </svg>
       </div>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════
-// HISTORY PAGE
+// ⑩ HISTORY PAGE
 // ════════════════════════════════════════════════════
 const HistoryPage = ({ history, onItemClick }) => {
   const [query, setQuery] = useState('');
   const [catTab, setCatTab] = useState('工作');
+
   const filtered = history.filter(t => {
     if ((t.category||'工作') !== catTab) return false;
     if (!query) return true;
     const q = query.toLowerCase();
     return (t.title||'').toLowerCase().includes(q) || (t.owner||'').toLowerCase().includes(q);
   });
+
   const grouped = {};
-  filtered.forEach(t => { const d = t.completionDate ? new Date(t.completionDate+'T00:00:00') : null; const key = d&&!isNaN(d)?`${d.getFullYear()} 年 ${d.getMonth()+1} 月`:'未知'; if(!grouped[key])grouped[key]=[]; grouped[key].push(t); });
+  filtered.forEach(t => {
+    const d = t.completionDate ? new Date(t.completionDate + 'T00:00:00') : null;
+    const key = d && !isNaN(d) ? `${d.getFullYear()} 年 ${d.getMonth()+1} 月` : '未知';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(t);
+  });
+
   return (
     <div>
       <div className="cat-tab-bar">
-        {['工作','生活'].map(cat => <button key={cat} className={`cat-tab-btn${catTab===cat?' active':''}`} onClick={() => setCatTab(cat)}>{cat==='工作'?'💼 工作':'🏠 生活'}</button>)}
+        {['工作','生活'].map(cat => (
+          <button key={cat} className={`cat-tab-btn${catTab===cat?' active':''}`} onClick={() => setCatTab(cat)}>
+            {cat==='工作'?'💼 工作':'🏠 生活'}
+          </button>
+        ))}
       </div>
       <div className="h-search">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/><line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        <input placeholder="搜尋關鍵字 / 負責人..." value={query} onChange={e => setQuery(e.target.value)}/>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/>
+          <line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <input placeholder="搜尋關鍵字 / 負責人..." value={query} onChange={e => setQuery(e.target.value)} />
         {query && <span onClick={() => setQuery('')} style={{cursor:'pointer',color:'#bbb',fontSize:20,lineHeight:1}}>×</span>}
       </div>
-      {filtered.length===0 && <div className="empty">查無結果</div>}
-      {Object.entries(grouped).map(([month,items]) => (
+      {filtered.length === 0 && <div className="empty">查無結果</div>}
+      {Object.entries(grouped).map(([month, items]) => (
         <div key={month}>
           <div className="h-month">{month}</div>
-          {items.map((t,i) => (
+          {items.map((t, i) => (
             <div key={i} className="h-row" onClick={() => onItemClick(t)}>
-              <div className="h-top"><PBadge level={t.priority}/><span className="h-title">{t.title}</span><span className="h-date">{fmtShort(t.completionDate)}</span></div>
-              <div className="h-meta">負責人：{t.owner||'—'}</div>
+              <div className="h-top">
+                <PBadge level={t.priority} />
+                <span className="h-title">{t.title}</span>
+                <span className="h-date">{fmtShort(t.completionDate)}</span>
+              </div>
+              <div className="h-meta">負責人：{t.owner || '—'}</div>
             </div>
           ))}
         </div>
@@ -1078,23 +1684,82 @@ const HistoryPage = ({ history, onItemClick }) => {
 };
 
 // ════════════════════════════════════════════════════
-// SETTINGS PAGE
+// ⑪ SETUP SCREEN
+// ════════════════════════════════════════════════════
+const SetupScreen = ({ onSave }) => {
+  const [url, setUrl] = useState('');
+  return (
+    <div className="setup-wrap">
+      <div style={{textAlign:'center',marginBottom:8}}>
+        <svg width="64" height="64" viewBox="0 0 72 72">
+          <rect x="8" y="8" width="26" height="26" rx="5" fill="#FCEBEB"/>
+          <text x="21" y="28" textAnchor="middle" fill="#A32D2D" fontSize="13" fontWeight="700" fontFamily="sans-serif">P1</text>
+          <rect x="38" y="8" width="26" height="26" rx="5" fill="#FAEEDA"/>
+          <text x="51" y="28" textAnchor="middle" fill="#854F0B" fontSize="13" fontWeight="700" fontFamily="sans-serif">P2</text>
+          <rect x="8" y="38" width="26" height="26" rx="5" fill="#f0f0f0"/>
+          <text x="21" y="58" textAnchor="middle" fill="#555" fontSize="13" fontWeight="700" fontFamily="sans-serif">P3</text>
+          <rect x="38" y="38" width="26" height="26" rx="5" fill="#EAF3DE"/>
+          <text x="51" y="58" textAnchor="middle" fill="#27500A" fontSize="13" fontWeight="700" fontFamily="sans-serif">P4</text>
+        </svg>
+      </div>
+      <div className="setup-title">工作追蹤設定</div>
+      <div className="setup-desc">
+        請先部署 Google Apps Script，取得網址後貼入下方：
+      </div>
+      <input
+        className="setup-input"
+        type="url"
+        placeholder="https://script.google.com/macros/s/.../exec"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+      />
+      <button
+        className="btn btn-primary"
+        onClick={() => { if(url.trim()) onSave(url.trim()); }}
+        style={{width:'100%',padding:13,borderRadius:10,fontSize:15}}
+      >
+        儲存並開始使用
+      </button>
+      <div style={{fontSize:12,color:'#bbb',lineHeight:1.7,textAlign:'center'}}>
+        詳見隨附的 apps-script.gs 說明
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════
+// ⑫ SETTINGS PAGE
 // ════════════════════════════════════════════════════
 const SettingsPage = ({ onBack }) => {
-  const [engine, setEngine] = useState(localStorage.getItem('ai_engine')||'gemini');
-  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_key')||'');
-  const [claudeKey, setClaudeKey] = useState(localStorage.getItem('claude_key')||'');
+  const [engine,    setEngine]    = useState(localStorage.getItem('ai_engine')  || 'gemini');
+  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_key') || '');
+  const [claudeKey, setClaudeKey] = useState(localStorage.getItem('claude_key') || '');
   const [saved, setSaved] = useState(false);
-  const handleSave = () => { localStorage.setItem('ai_engine',engine); localStorage.setItem('gemini_key',geminiKey.trim()); localStorage.setItem('claude_key',claudeKey.trim()); setSaved(true); setTimeout(()=>setSaved(false),2000); };
+  const handleSave = () => {
+    localStorage.setItem('ai_engine',  engine);
+    localStorage.setItem('gemini_key', geminiKey.trim());
+    localStorage.setItem('claude_key', claudeKey.trim());
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+  };
   return (
     <div style={{background:'var(--bg)',minHeight:'100%',paddingBottom:'calc(40px + env(safe-area-inset-bottom,0px))'}}>
-      <div className="page-hdr"><span className="back-btn" onClick={onBack}>‹</span><span className="page-hdr-title">設定</span><span></span></div>
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">設定</span>
+        <span></span>
+      </div>
       <div style={{background:'var(--card)',marginBottom:8}}>
         <div style={{padding:'14px 16px 10px'}}>
           <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>🤖 AI 分析引擎</div>
           <div style={{display:'flex',gap:8}}>
             {[{id:'gemini',label:'Gemini',sub:'免費',color:'#4285F4'},{id:'claude',label:'Claude',sub:'付費更強',color:'#D97706'}].map(e=>(
-              <button key={e.id} onClick={()=>setEngine(e.id)} style={{flex:1,padding:'10px 8px',borderRadius:10,border:engine===e.id?'none':'1px solid var(--border)',background:engine===e.id?e.color:'#fff',color:engine===e.id?'#fff':'var(--text-muted)',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
+              <button key={e.id} onClick={()=>setEngine(e.id)} style={{
+                flex:1,padding:'10px 8px',borderRadius:10,
+                border:engine===e.id?'none':'1px solid var(--border)',
+                background:engine===e.id?e.color:'#fff',
+                color:engine===e.id?'#fff':'var(--text-muted)',
+                cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',
+              }}>
                 <div style={{fontWeight:600,fontSize:14}}>{e.label}</div>
                 <div style={{fontSize:10,marginTop:2,opacity:0.9}}>{e.sub}</div>
               </button>
@@ -1104,87 +1769,193 @@ const SettingsPage = ({ onBack }) => {
       </div>
       <div style={{background:'var(--card)',marginBottom:8}}>
         <div style={{padding:'14px 16px'}}>
-          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}><div style={{fontSize:13,fontWeight:500}}>Gemini API Key</div>{engine==='gemini'&&<span style={{fontSize:10,background:'#4285F4',color:'#fff',padding:'1px 7px',borderRadius:10}}>使用中</span>}</div>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:500}}>Gemini API Key</div>
+            {engine==='gemini'&&<span style={{fontSize:10,background:'#4285F4',color:'#fff',padding:'1px 7px',borderRadius:10}}>使用中</span>}
+          </div>
           <div style={{fontSize:11,color:'#bbb',marginBottom:8}}>免費：<span style={{color:'var(--blue)'}}>aistudio.google.com</span></div>
           <input className="settings-key-input" type="password" placeholder="AIza..." value={geminiKey} onChange={e=>setGeminiKey(e.target.value)}/>
         </div>
       </div>
       <div style={{background:'var(--card)',marginBottom:8}}>
         <div style={{padding:'14px 16px'}}>
-          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}><div style={{fontSize:13,fontWeight:500}}>Claude API Key</div>{engine==='claude'&&<span style={{fontSize:10,background:'#D97706',color:'#fff',padding:'1px 7px',borderRadius:10}}>使用中</span>}</div>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:500}}>Claude API Key</div>
+            {engine==='claude'&&<span style={{fontSize:10,background:'#D97706',color:'#fff',padding:'1px 7px',borderRadius:10}}>使用中</span>}
+          </div>
           <div style={{fontSize:11,color:'#bbb',marginBottom:8}}>付費：<span style={{color:'var(--blue)'}}>console.anthropic.com</span></div>
           <input className="settings-key-input" type="password" placeholder="sk-ant-..." value={claudeKey} onChange={e=>setClaudeKey(e.target.value)}/>
         </div>
       </div>
       <div style={{background:'var(--card)',marginBottom:8}}>
-        <div style={{padding:'14px 16px'}}><button className="btn btn-primary" style={{width:'100%'}} onClick={handleSave}>{saved?'✓ 已儲存':'儲存設定'}</button></div>
+        <div style={{padding:'14px 16px'}}>
+          <button className="btn btn-primary" style={{width:'100%'}} onClick={handleSave}>
+            {saved?'✓ 已儲存':'儲存設定'}
+          </button>
+        </div>
       </div>
       <div style={{background:'var(--card)'}}>
-        <div style={{padding:'14px 16px'}}><div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.2　API Key 僅存於本機</div></div>
+        <div style={{padding:'14px 16px'}}>
+          <div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.2　API Key 僅存於本機</div>
+        </div>
       </div>
     </div>
   );
 };
 
+
 // ════════════════════════════════════════════════════
-// NOTE FORM PAGE
+// ⑭ NOTE FORM PAGE
 // ════════════════════════════════════════════════════
 const NoteFormPage = ({ initial, onBack, onSave }) => {
   const blank = { id:'', category:'', conclusion:'', detail:'', points:'', tags:'', createdDate: todayStr() };
   const [form, setForm] = useState(initial ? { ...blank, ...initial } : blank);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
   const handleSave = () => {
     if (!form.conclusion.trim()) { alert('請填入結論'); return; }
     const notes = getNotes();
-    if (form.id) { const idx = notes.findIndex(n => n.id===form.id); if(idx>=0) notes[idx]=form; else notes.unshift(form); } else { notes.unshift({ ...form, id: 'N'+Date.now() }); }
-    saveNotes(notes); onSave(notes);
+    if (form.id) {
+      const idx = notes.findIndex(n => n.id === form.id);
+      if (idx >= 0) notes[idx] = form; else notes.unshift(form);
+    } else {
+      notes.unshift({ ...form, id: 'N' + Date.now() });
+    }
+    saveNotes(notes);
+    onSave(notes);
   };
+
   return (
     <div className="form-wrap">
-      <div className="page-hdr"><span className="back-btn" onClick={onBack}>‹</span><span className="page-hdr-title">{form.id?'編輯筆記':'新增學習筆記'}</span><span></span></div>
-      <div style={{background:'#F3F0FF',padding:'10px 16px',fontSize:12,color:'#5B3EA0',lineHeight:1.8,marginBottom:8}}>📐 <strong>結論先行</strong>：先寫最重要的結論<br/>🌳 <strong>見林再見樹</strong>：先說大局影響，再列細節</div>
-      <div className="form-section"><div className="form-row"><span className="f-label">類別</span><input type="text" placeholder="客戶管理 / 報表 / 談判 / 溝通..." value={form.category} onChange={e=>set('category',e.target.value)}/></div></div>
-      <div className="form-section"><div className="form-textarea-wrap"><label>🎯 結論（必填，一句話）</label><textarea placeholder="最重要的結論，結論先行..." value={form.conclusion} rows={2} onChange={e=>set('conclusion',e.target.value)} style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/></div></div>
-      <div className="form-section"><div className="form-textarea-wrap"><label>🌳 背景說明（見林：整體影響與大局）</label><textarea placeholder="為什麼這個結論重要？影響是什麼？" value={form.detail} rows={3} onChange={e=>set('detail',e.target.value)} style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/></div></div>
-      <div className="form-section"><div className="form-textarea-wrap"><label>🌿 注意事項（見樹：條列細節）</label><textarea placeholder="• 細節一&#10;• 細節二&#10;• 細節三" value={form.points} rows={5} onChange={e=>set('points',e.target.value)} style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/></div></div>
-      <div className="form-section">
-        <div className="form-row"><span className="f-label">提醒標籤</span><input type="text" placeholder="Cliff, KOE, 報告（逗號分隔）" value={form.tags} onChange={e=>set('tags',e.target.value)}/></div>
-        <div style={{padding:'2px 16px 10px',fontSize:11,color:'#bbb'}}>新增任務時，標題含這些關鍵字即自動彈出提醒</div>
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">{form.id ? '編輯筆記' : '新增學習筆記'}</span>
+        <span></span>
       </div>
-      <div className="btn-row"><button className="btn btn-primary" onClick={handleSave}>存檔</button><button className="btn btn-secondary" onClick={onBack}>取消</button></div>
+
+      <div style={{background:'#F3F0FF',padding:'10px 16px',fontSize:12,color:'#5B3EA0',lineHeight:1.8,marginBottom:8}}>
+        📐 <strong>結論先行</strong>：先寫最重要的結論<br/>
+        🌳 <strong>見林再見樹</strong>：先說大局影響，再列細節
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">類別</span>
+          <input type="text" placeholder="客戶管理 / 報表 / 談判 / 溝通..." value={form.category} onChange={e=>set('category',e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>🎯 結論（必填，一句話）</label>
+          <textarea placeholder="最重要的結論，結論先行..." value={form.conclusion} rows={2}
+            onChange={e=>set('conclusion',e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>🌳 背景說明（見林：整體影響與大局）</label>
+          <textarea placeholder="為什麼這個結論重要？影響是什麼？" value={form.detail} rows={3}
+            onChange={e=>set('detail',e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-textarea-wrap">
+          <label>🌿 注意事項（見樹：條列細節）</label>
+          <textarea placeholder="• 細節一&#10;• 細節二&#10;• 細節三" value={form.points} rows={5}
+            onChange={e=>set('points',e.target.value)}
+            style={{width:'100%',border:'none',outline:'none',fontSize:14,background:'transparent',color:'var(--text)',fontFamily:'inherit',resize:'none',lineHeight:1.7}}/>
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-row">
+          <span className="f-label">提醒標籤</span>
+          <input type="text" placeholder="Cliff, KOE, 報告（逗號分隔）" value={form.tags} onChange={e=>set('tags',e.target.value)} />
+        </div>
+        <div style={{padding:'2px 16px 10px',fontSize:11,color:'#bbb'}}>
+          新增任務時，標題含這些關鍵字即自動彈出提醒
+        </div>
+      </div>
+
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={handleSave}>存檔</button>
+        <button className="btn btn-secondary" onClick={onBack}>取消</button>
+      </div>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════
-// NOTES LIST PAGE
+// ⑮ NOTES LIST PAGE
 // ════════════════════════════════════════════════════
 const NotesListPage = ({ notes, onBack, onAdd, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(null);
   const [query, setQuery] = useState('');
-  const filtered = notes.filter(n => { if (!query) return true; const q = query.toLowerCase(); return (n.conclusion||'').toLowerCase().includes(q)||(n.category||'').toLowerCase().includes(q)||(n.tags||'').toLowerCase().includes(q); });
+
+  const filtered = notes.filter(n => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (n.conclusion||'').toLowerCase().includes(q)
+      || (n.category||'').toLowerCase().includes(q)
+      || (n.tags||'').toLowerCase().includes(q);
+  });
+
   return (
     <div style={{background:'var(--bg)',minHeight:'100%',paddingBottom:40}}>
-      <div className="page-hdr"><span className="back-btn" onClick={onBack}>‹</span><span className="page-hdr-title">學習筆記</span><span className="hdr-action" onClick={onAdd}>＋ 新增</span></div>
-      <div style={{background:'#F3F0FF',padding:'8px 16px',fontSize:11,color:'#5B3EA0',lineHeight:1.7}}>底層邏輯：<strong>結論先行</strong> ✦ <strong>見林再見樹</strong></div>
+      <div className="page-hdr">
+        <span className="back-btn" onClick={onBack}>‹</span>
+        <span className="page-hdr-title">學習筆記</span>
+        <span className="hdr-action" onClick={onAdd}>＋ 新增</span>
+      </div>
+
+      <div style={{background:'#F3F0FF',padding:'8px 16px',fontSize:11,color:'#5B3EA0',lineHeight:1.7}}>
+        底層邏輯：<strong>結論先行</strong> ✦ <strong>見林再見樹</strong>
+      </div>
+
       <div className="h-search" style={{margin:'8px 14px'}}>
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/><line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="#bbb" strokeWidth="1.5"/>
+          <line x1="10.5" y1="10.5" x2="15" y2="15" stroke="#bbb" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
         <input placeholder="搜尋筆記..." value={query} onChange={e=>setQuery(e.target.value)}/>
         {query && <span onClick={()=>setQuery('')} style={{cursor:'pointer',color:'#bbb',fontSize:20,lineHeight:1}}>×</span>}
       </div>
-      {filtered.length===0 && <div className="empty">{notes.length===0?'尚無學習筆記':'查無結果'}</div>}
-      {filtered.map((n,i) => (
+
+      {filtered.length === 0 && <div className="empty">
+        {notes.length===0 ? '尚無學習筆記' : '查無結果'}
+      </div>}
+
+      {filtered.map((n, i) => (
         <div key={n.id}>
           <div className="note-list-item" onClick={() => setExpanded(expanded===i?null:i)}>
             <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
-              <div style={{flex:1}}>{n.category && <div className="note-cat-tag">{n.category}</div>}<div className="note-conclusion-text">{n.conclusion}</div>{n.tags && <div className="note-tags-text">🏷 {n.tags}</div>}</div>
+              <div style={{flex:1}}>
+                {n.category && <div className="note-cat-tag">{n.category}</div>}
+                <div className="note-conclusion-text">{n.conclusion}</div>
+                {n.tags && <div className="note-tags-text">🏷 {n.tags}</div>}
+              </div>
               <span style={{fontSize:16,color:'#bbb',flexShrink:0,paddingTop:2}}>{expanded===i?'∨':'›'}</span>
             </div>
           </div>
-          {expanded===i && (
+          {expanded === i && (
             <div className="note-detail-wrap">
-              {n.detail && <div style={{marginBottom:8}}><div style={{fontSize:11,color:'#667eea',fontWeight:600,marginBottom:3}}>🌳 背景說明</div><div style={{fontSize:13,color:'#555',lineHeight:1.7}}>{n.detail}</div></div>}
-              {n.points && <div style={{marginBottom:10}}><div style={{fontSize:11,color:'#667eea',fontWeight:600,marginBottom:3}}>🌿 注意事項</div><div style={{fontSize:13,color:'#555',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{n.points}</div></div>}
+              {n.detail && (
+                <div style={{marginBottom:8}}>
+                  <div style={{fontSize:11,color:'#667eea',fontWeight:600,marginBottom:3}}>🌳 背景說明</div>
+                  <div style={{fontSize:13,color:'#555',lineHeight:1.7}}>{n.detail}</div>
+                </div>
+              )}
+              {n.points && (
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:11,color:'#667eea',fontWeight:600,marginBottom:3}}>🌿 注意事項</div>
+                  <div style={{fontSize:13,color:'#555',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{n.points}</div>
+                </div>
+              )}
               <div style={{display:'flex',gap:8,marginTop:8}}>
                 <button className="btn btn-edit" style={{fontSize:12,padding:'6px 14px',flex:1}} onClick={()=>onEdit(n)}>編輯</button>
                 <button className="btn btn-secondary" style={{fontSize:12,padding:'6px 14px',flex:1}} onClick={()=>onDelete(n.id)}>刪除</button>
@@ -1198,13 +1969,38 @@ const NotesListPage = ({ notes, onBack, onAdd, onEdit, onDelete }) => {
 };
 
 // ════════════════════════════════════════════════════
-// MAIN APP
+// ⑬ MAIN APP
 // ════════════════════════════════════════════════════
 const TAB_ICONS = {
-  dashboard: (<svg width="19" height="19" viewBox="0 0 20 20"><rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.85"/><rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/><rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/><rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/></svg>),
-  meetings:  (<svg width="19" height="19" viewBox="0 0 20 20"><rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><rect x="6" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/><rect x="12" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/><line x1="2" y1="9" x2="18" y2="9" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/></svg>),
-  tasks:     (<svg width="19" height="19" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><line x1="7" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><line x1="7" y1="12" x2="10.5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/></svg>),
-  history:   (<svg width="19" height="19" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><polyline points="10,6 10,10 13,12" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.6"/></svg>),
+  dashboard: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.85"/>
+      <rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+      <rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4"/>
+    </svg>
+  ),
+  meetings: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="2" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <rect x="6" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <rect x="12" y="2" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+      <line x1="2" y1="9" x2="18" y2="9" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+    </svg>
+  ),
+  tasks: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="7" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <line x1="7" y1="12" x2="10.5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+    </svg>
+  ),
+  history: (
+    <svg width="19" height="19" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+      <polyline points="10,6 10,10 13,12" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.6"/>
+    </svg>
+  ),
 };
 
 const App = () => {
@@ -1216,7 +2012,7 @@ const App = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [meetLoading, setMeetLoading] = useState(false);
-  const [view, setView] = useState('list');
+  const [view, setView] = useState('list'); // 'list' | 'add' | 'detail' | 'historyDetail'
   const [selectedTask, setSelectedTask] = useState(null);
   const [toast, setToast] = useState('');
   const [defaultCat, setDefaultCat] = useState('工作');
@@ -1224,16 +2020,26 @@ const App = () => {
   const [selectedNote, setSelectedNote] = useState(null);
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 4000); };
-  const saveGasUrl = url => { localStorage.setItem('gas_url', url); GAS_URL = url; setGasUrl(url); };
 
-  useEffect(() => { loadAll(); }, []);
+  const saveGasUrl = url => {
+    localStorage.setItem('gas_url', url);
+    GAS_URL = url;
+    setGasUrl(url);
+  };
 
+  useEffect(() => { loadAll(); }, []); // 直接載入，GAS URL 已內建
+
+  // ── 背景自動同步（每 60 秒，不顯示 loading）──
   useEffect(() => {
     const timer = setInterval(async () => {
       if (view !== 'list') return;
       try {
         const res = await api.get('getAll', { date: todayStr() });
-        if (res?.tasks) { const sorted = sortByPriority(res.tasks); setTasks(sorted); try { localStorage.setItem('cache_tasks', JSON.stringify(sorted)); } catch(e) {} }
+        if (res?.tasks) {
+          const sorted = sortByPriority(res.tasks);
+          setTasks(sorted);
+          try { localStorage.setItem('cache_tasks', JSON.stringify(sorted)); } catch(e) {}
+        }
         if (res?.members) setMembers(res.members);
       } catch(e) {}
       loadHistory();
@@ -1242,14 +2048,22 @@ const App = () => {
   }, [view]);
 
   const loadAll = async (isRetry = false) => {
+    // ① 立即顯示快取，畫面不空白
     if (!isRetry) {
       try {
-        const ct = localStorage.getItem('cache_tasks'); const cm = localStorage.getItem('cache_members'); const cmt = localStorage.getItem('cache_meetings_'+todayStr());
-        if (ct) setTasks(JSON.parse(ct)); if (cm) setMembers(JSON.parse(cm)); if (cmt) setMeetings(JSON.parse(cmt));
+        const ct = localStorage.getItem('cache_tasks');
+        const cm = localStorage.getItem('cache_members');
+        const cmt = localStorage.getItem('cache_meetings_' + todayStr());
+        if (ct) setTasks(JSON.parse(ct));
+        if (cm) setMembers(JSON.parse(cm));
+        if (cmt) setMeetings(JSON.parse(cmt));
       } catch(e) {}
     }
+
+    // ② 優先載入 Tasks（不含 ICS）
     setLoading(true);
     let loadOk = false;
+    // 最多重試 3 次
     const maxTries = isRetry ? 2 : 3;
     for (let attempt = 1; attempt <= maxTries; attempt++) {
       try {
@@ -1258,37 +2072,49 @@ const App = () => {
         const sorted = sortByPriority(res.tasks || []);
         setTasks(sorted);
         if (res.members && res.members.length > 0) setMembers(res.members);
-        try { localStorage.setItem('cache_tasks', JSON.stringify(sorted)); if (res.members && res.members.length > 0) localStorage.setItem('cache_members', JSON.stringify(res.members)); } catch(ce) {}
-        showToast('✓ 任務已同步'); loadOk = true; break;
+        try {
+          localStorage.setItem('cache_tasks', JSON.stringify(sorted));
+          if (res.members && res.members.length > 0) localStorage.setItem('cache_members', JSON.stringify(res.members));
+        } catch(ce) {}
+        showToast('✓ 任務已同步');
+        loadOk = true;
+        break;
       } catch(e) {
-        if (attempt < maxTries) { showToast(`⏳ 第 ${attempt} 次連線失敗，${attempt+1} 秒後重試...`); await new Promise(r => setTimeout(r, attempt * 1000)); }
+        if (attempt < maxTries) {
+          showToast(`⏳ 第 ${attempt} 次連線失敗，${attempt+1} 秒後重試...`);
+          await new Promise(r => setTimeout(r, (attempt) * 1000));
+        }
       }
     }
     if (!loadOk) showToast('⚠ 連線失敗，顯示快取資料（請稍後重新整理）');
     setLoading(false);
+
+    // ③ 背景另外載入會議（ICS，較慢不阻塞任務顯示）
     loadMeetings();
+
+    // ④ 背景載入歷史紀錄
     loadHistory();
   };
 
-  const loadHistory = async () => { try { const h = await api.getHistory(); setHistory(h.history || []); } catch(e) {} };
+  const loadHistory = async () => {
+    try {
+      const h = await api.getHistory();
+      setHistory(h.history || []);
+    } catch(e) { /* 歷史紀錄載入失敗不影響主功能 */ }
+  };
 
   const loadMeetings = async () => {
-    setMeetLoading(true); showToast('⟳ 同步會議中...');
+    setMeetLoading(true);
+    showToast('⟳ 同步會議中...');
     try {
       const res = await api.getMeetings(todayStr());
       const doneMap = JSON.parse(localStorage.getItem(`meeting_done_${todayStr()}`) || '{}');
       const ms = (res.meetings || []).map(m => ({ ...m, done: !!doneMap[m.title] }));
       setMeetings(ms);
-      // ★ FIX: 寫入快取（原本只讀不寫）
-      try { localStorage.setItem('cache_meetings_' + todayStr(), JSON.stringify(ms)); } catch(ce) {}
-      showToast(ms.length > 0 ? `✓ 會議已同步（${ms.length} 場）` : '✓ 同步完成（今日無會議）');
+      showToast('✓ 會議已同步');
     } catch (e) {
-      // 載入快取作為備援
-      try {
-        const cached = localStorage.getItem('cache_meetings_' + todayStr());
-        if (cached) { setMeetings(JSON.parse(cached)); showToast('⚠ ICS 同步失敗，顯示快取會議'); }
-        else showToast('⚠ 會議同步失敗（請確認 Sheets Settings 的 ICS_URL）');
-      } catch(ce) { showToast('⚠ 會議同步失敗'); }
+      showToast('⚠ 同步失敗，保留舊資料');
+      console.warn('Meeting load failed', e);
     }
     setMeetLoading(false);
   };
@@ -1297,37 +2123,120 @@ const App = () => {
     const newTask = { ...data, id: `T${Date.now()}` };
     try {
       await api.addTask(newTask);
+      // 新增成功後重新從 Sheets 取得，確保同步
       setTasks(prev => sortByPriority([...prev, newTask]));
-      setView('list'); showToast('✓ 任務已新增');
-      setTimeout(async () => { try { const res = await api.getTasks(); if (res.tasks) setTasks(sortByPriority(res.tasks)); } catch(e) {} }, 2000);
-    } catch(e) { alert(e.name==='AbortError' ? '⚠ 連線逾時，任務可能未儲存' : '⚠ 新增失敗：' + e.message); }
+      setView('list');
+      showToast('✓ 任務已新增');
+      // 背景重新同步確認
+      setTimeout(async () => {
+        try {
+          const res = await api.getTasks();
+          if (res.tasks) {
+            const sorted = sortByPriority(res.tasks);
+            setTasks(sorted);
+          }
+        } catch(e) {}
+      }, 2000);
+    } catch(e) {
+      const msg = e.name === 'AbortError' ? '⚠ 連線逾時，任務可能未儲存' : '⚠ 新增失敗：' + e.message;
+      alert(msg);
+    }
   };
 
   const handleSavedTask = (id, data) => {
-    setTasks(prev => { const updated = sortByPriority(prev.map(t => t.id===id ? {...t,...data} : t)); try { localStorage.setItem('cache_tasks', JSON.stringify(updated)); } catch(e) {} return updated; });
+    setTasks(prev => {
+      const updated = sortByPriority(prev.map(t => t.id === id ? { ...t, ...data } : t));
+      try { localStorage.setItem('cache_tasks', JSON.stringify(updated)); } catch(e) {}
+      return updated;
+    });
     showToast('✓ 已更新');
   };
 
-  const handleClosedTask = (id, data) => { setTasks(prev => prev.filter(t => t.id!==id)); setHistory(prev => [{...data}, ...prev]); setView('list'); showToast('✓ 任務已結案'); };
-  const handleDeleteTask = async (id) => { if (!window.confirm('確定要刪除此任務嗎？此操作無法復原。')) return; try { await api.deleteTask(id); setTasks(prev => prev.filter(t => t.id!==id)); setView('list'); showToast('✓ 任務已刪除'); } catch(e) { alert('⚠ 刪除失敗：' + e.message); } };
-  const handleDeleteHistory = async (id) => { if (!window.confirm('確定要刪除此歷史紀錄嗎？')) return; try { await api.deleteHistory(id); setHistory(prev => prev.filter(t => t.id!==id)); setView('list'); showToast('✓ 已刪除'); } catch(e) { alert('⚠ 刪除失敗：' + e.message); } };
+  const handleClosedTask = (id, data) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setHistory(prev => [{ ...data }, ...prev]);
+    setView('list');
+    showToast('✓ 任務已結案');
+  };
 
-  const pageWrap = content => (<div style={{height:'100vh',overflowY:'auto',WebkitOverflowScrolling:'touch',background:'var(--bg)'}}>{content}</div>);
+  const handleDeleteTask = async (id) => {
+    if (!window.confirm('確定要刪除此任務嗎？此操作無法復原。')) return;
+    try {
+      await api.deleteTask(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setView('list');
+      showToast('✓ 任務已刪除');
+    } catch(e) { alert('⚠ 刪除失敗：' + e.message); }
+  };
 
-  if (view === 'settings') return pageWrap(<SettingsPage onBack={() => setView('list')}/>);
-  if (view === 'notesList') return pageWrap(<NotesListPage notes={notes} onBack={() => setView('list')} onAdd={() => { setSelectedNote(null); setView('noteForm'); }} onEdit={n => { setSelectedNote(n); setView('noteForm'); }} onDelete={id => { if (!window.confirm('確定刪除此筆記？')) return; const updated = notes.filter(n => n.id!==id); saveNotes(updated); setNotes(updated); }}/>);
-  if (view === 'noteForm') return pageWrap(<NoteFormPage initial={selectedNote} onBack={() => setView(selectedNote?'notesList':'list')} onSave={updated => { setNotes(updated); setView('notesList'); }}/>);
-  if (view === 'add') return pageWrap(<TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" defaultCategory={defaultCat}/>);
-  if (view === 'detail' && selectedTask) return pageWrap(<TaskDetailPage task={selectedTask} members={members} onBack={() => setView('list')} onSaved={handleSavedTask} onClosed={handleClosedTask} onDelete={handleDeleteTask}/>);
-  if (view === 'historyDetail' && selectedTask) return pageWrap(<TaskDetailPage task={selectedTask} members={members} onBack={() => setView('list')} onSaved={() => {}} onClosed={() => {}} onDelete={handleDeleteHistory} isHistory={true}/>);
+  const handleDeleteHistory = async (id) => {
+    if (!window.confirm('確定要刪除此歷史紀錄嗎？')) return;
+    try {
+      await api.deleteHistory(id);
+      setHistory(prev => prev.filter(t => t.id !== id));
+      setView('list');
+      showToast('✓ 已刪除');
+    } catch(e) { alert('⚠ 刪除失敗：' + e.message); }
+  };
+
+  // ── Render overlay views ──
+  const pageWrap = content => (
+    <div style={{height:'100vh',overflowY:'auto',WebkitOverflowScrolling:'touch',background:'var(--bg)'}}>
+      {content}
+    </div>
+  );
+
+  if (view === 'settings') return pageWrap(<SettingsPage onBack={() => setView('list')} />);
+  if (view === 'notesList') return pageWrap(
+    <NotesListPage
+      notes={notes}
+      onBack={() => setView('list')}
+      onAdd={() => { setSelectedNote(null); setView('noteForm'); }}
+      onEdit={n => { setSelectedNote(n); setView('noteForm'); }}
+      onDelete={id => {
+        if (!window.confirm('確定刪除此筆記？')) return;
+        const updated = notes.filter(n => n.id !== id);
+        saveNotes(updated); setNotes(updated);
+      }}
+    />
+  );
+  if (view === 'noteForm') return pageWrap(
+    <NoteFormPage
+      initial={selectedNote}
+      onBack={() => setView(selectedNote ? 'notesList' : 'list')}
+      onSave={updated => { setNotes(updated); setView('notesList'); }}
+    />
+  );
+  if (view === 'add') return pageWrap(
+    <TaskFormPage members={members} onBack={() => setView('list')} onSave={handleAddTask} mode="add" defaultCategory={defaultCat} />
+  );
+  if (view === 'detail' && selectedTask) return pageWrap(
+    <TaskDetailPage
+      task={selectedTask} members={members}
+      onBack={() => setView('list')}
+      onSaved={handleSavedTask}
+      onClosed={handleClosedTask}
+      onDelete={handleDeleteTask}
+    />
+  );
+  if (view === 'historyDetail' && selectedTask) return pageWrap(
+    <TaskDetailPage
+      task={selectedTask} members={members}
+      onBack={() => setView('list')}
+      onSaved={() => {}}
+      onClosed={() => {}}
+      onDelete={handleDeleteHistory}
+      isHistory={true}
+    />
+  );
 
   const renderContent = () => {
-    if (loading) return <div className="spinner" style={{flexDirection:'column',gap:12}}><div style={{fontSize:28}}>⟳</div><div>載入中，首次約需 5-10 秒...</div></div>;
+    if (loading) return <div className="spinner" style={{flexDirection:"column",gap:12}}><div style={{fontSize:28}}>⟳</div><div>載入中，首次約需 5-10 秒...</div></div>;
     switch (tab) {
-      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onSettings={()=>setView('settings')} notes={notes} onViewNotes={()=>setView('notesList')} onAddNote={()=>{setSelectedNote(null);setView('noteForm');}}/>;
-      case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading}/>;
-      case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onAddTask={cat=>{setDefaultCat(cat);setView('add');}}/>;
-      case 'history': return <HistoryPage history={history} onItemClick={t=>{setSelectedTask(t);setView('historyDetail');}}/>;
+      case 'dashboard': return <Dashboard meetings={meetings} tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onSettings={()=>setView('settings')} notes={notes} onViewNotes={()=>setView('notesList')} onAddNote={()=>{setSelectedNote(null);setView('noteForm');}} />;
+      case 'meetings': return <MeetingsPage meetings={meetings} setMeetings={setMeetings} onRefresh={loadMeetings} loading={meetLoading} />;
+      case 'tasks': return <TasksPage tasks={tasks} onTaskClick={t=>{setSelectedTask(t);setView('detail');}} onAddTask={cat=>{setDefaultCat(cat);setView('add');}} />;
+      case 'history': return <HistoryPage history={history} onItemClick={t=>{setSelectedTask(t);setView('historyDetail');}} />;
     }
   };
 
@@ -1335,10 +2244,18 @@ const App = () => {
     <>
       <div style={{height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div className="scroll-area">{renderContent()}</div>
+
         <div className="tab-bar">
-          {[{key:'dashboard',label:'戰情中心'},{key:'meetings',label:'今日會議'},{key:'tasks',label:'Tasks'},{key:'history',label:'歷史紀錄'}].map(({key,label}) => (
-            <div key={key} className={`tab-item ${tab===key?'active':''}`} onClick={() => setTab(key)}>
-              {TAB_ICONS[key]}<span className="t-label">{label}</span><div className="t-bar"/>
+          {[
+            { key:'dashboard', label:'戰情中心' },
+            { key:'meetings',  label:'今日會議' },
+            { key:'tasks',     label:'Tasks' },
+            { key:'history',   label:'歷史紀錄' },
+          ].map(({ key, label }) => (
+            <div key={key} className={`tab-item ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+              {TAB_ICONS[key]}
+              <span className="t-label">{label}</span>
+              <div className="t-bar" />
             </div>
           ))}
         </div>
