@@ -855,7 +855,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNote
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <span onClick={onRefresh} style={{fontSize:16,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}} title="立即同步">🔄</span>
-          <span style={{fontSize:12,color:'#888',fontWeight:600}}>v3.2</span>
+          <span style={{fontSize:12,color:'#888',fontWeight:600}}>v3.3</span>
           <span onClick={onSettings} style={{fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}}>⚙</span>
         </div>
       </div>
@@ -1185,7 +1185,7 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   useEffect(() => {
     const onPaste = (e) => {
       if (analyzing) return;
-      // 優先偵測圖片
+      // 圖片：永遠攔截
       const img = Array.from(e.clipboardData?.items||[]).find(i => i.type.startsWith('image/'));
       if (img) {
         e.preventDefault();
@@ -1193,13 +1193,17 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
         setInputMode('image');
         return;
       }
-      // 偵測文字（電腦 Ctrl+V）
-      const text = e.clipboardData?.getData('text/plain') || '';
-      if (text.trim().length > 15) {
-        e.preventDefault();
-        setPendingText(p => p ? p + '\n\n---\n' + text.trim() : text.trim());
-        if (mode === 'add') setInputMode('text');
-        else setShowEditText(true);
+      // 文字：只在「不在 input/textarea 內」時才攔截（讓 textarea 正常貼上）
+      const active = document.activeElement;
+      const inInput = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT');
+      if (!inInput) {
+        const text = e.clipboardData?.getData('text/plain') || '';
+        if (text.trim().length > 15) {
+          e.preventDefault();
+          setPendingText(p => p ? p + '\n\n---\n' + text.trim() : text.trim());
+          if (mode === 'add') setInputMode('text');
+          else setShowEditText(true);
+        }
       }
     };
     document.addEventListener('paste', onPaste);
@@ -1831,7 +1835,7 @@ const SettingsPage = ({ onBack }) => {
       </div>
       <div style={{background:'var(--card)'}}>
         <div style={{padding:'14px 16px'}}>
-          <div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.2　API Key 僅存於本機</div>
+          <div style={{fontSize:12,color:'#bbb'}}>工作追蹤 PWA v3.3　API Key 僅存於本機</div>
         </div>
       </div>
     </div>
