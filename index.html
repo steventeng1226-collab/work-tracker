@@ -855,7 +855,7 @@ const Dashboard = ({ meetings, tasks, onTaskClick, onSettings, notes, onViewNote
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <span onClick={onRefresh} style={{fontSize:16,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}} title="立即同步">🔄</span>
-          <span style={{fontSize:10,color:'#ccc'}}>v3.2</span>
+          <span style={{fontSize:12,color:'#888',fontWeight:600}}>v3.2</span>
           <span onClick={onSettings} style={{fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'4px'}}>⚙</span>
         </div>
       </div>
@@ -1115,7 +1115,8 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
   // ── 多圖 pending 狀態 ──
   const [pendingImages, setPendingImages] = useState([]);
   const [pendingText,   setPendingText]   = useState('');
-  const [inputMode,     setInputMode]     = useState('image'); // 'image' | 'text'
+  const [inputMode,     setInputMode]     = useState('image');
+  const [showEditText,  setShowEditText]  = useState(false);
   const [dragging,      setDragging]      = useState(false);
   const pasteInputRef = useRef(null);
 
@@ -1197,7 +1198,8 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
       if (text.trim().length > 15) {
         e.preventDefault();
         setPendingText(p => p ? p + '\n\n---\n' + text.trim() : text.trim());
-        setInputMode('text');
+        if (mode === 'add') setInputMode('text');
+        else setShowEditText(true);
       }
     };
     document.addEventListener('paste', onPaste);
@@ -1414,14 +1416,46 @@ const TaskFormPage = ({ initial, members, onBack, onSave, mode = 'add', defaultC
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
             <label style={{marginBottom:0}}>處理過程履歷</label>
             {mode === 'edit' && (
-              <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}
-                onDrop={handleDrop} onDragOver={handleDragOver}>
-                {analyzing?'🤖 分析中...':'🤖 AI追加（拍照/貼上）'}
-                <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing}
-                  onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
-              </label>
+              <div style={{display:'flex',gap:5}}>
+                <label className="ai-append-btn" style={{opacity:analyzing?0.6:1}}
+                  onDrop={handleDrop} onDragOver={handleDragOver}>
+                  {analyzing?'🤖':'📷'} 圖片
+                  <input type="file" accept="image/*,.pdf,.html,.htm,.mht,.eml" style={{display:'none'}} disabled={analyzing}
+                    onChange={e => { if(e.target.files[0]) processFile(e.target.files[0]); e.target.value=''; }}/>
+                </label>
+                <button className="ai-append-btn"
+                  onClick={() => setShowEditText(v=>!v)}
+                  style={{background:showEditText?'#E0D6FF':'#F0EBF8',border:'none',cursor:'pointer'}}>
+                  📝 文字
+                </button>
+              </div>
             )}
           </div>
+          {/* 文字 AI 追加區（Edit 模式）*/}
+          {mode === 'edit' && (showEditText || pendingText) && (
+            <div style={{marginBottom:10}}>
+              <textarea
+                placeholder={'Ctrl+V 貼上 Email 或輸入文字...\n✅ 比圖片省 80% token'}
+                value={pendingText}
+                onChange={e => setPendingText(e.target.value)}
+                rows={4}
+                style={{width:'100%',border:'1px solid #D4CCFF',borderRadius:8,
+                  padding:'8px 10px',fontSize:13,fontFamily:'inherit',
+                  outline:'none',resize:'none',lineHeight:1.7,
+                  background:'#FAFAFF',color:'var(--text)',marginBottom:6}}
+              />
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <button className="ai-fill-btn" onClick={analyzeText}
+                  disabled={!pendingText.trim()||analyzing}
+                  style={{flex:1,margin:0,opacity:(!pendingText.trim()||analyzing)?0.5:1,fontSize:13}}>
+                  <span>{analyzing?'🤖':'✨'}</span>
+                  <span>{analyzing?'AI 分析中...':'AI 分析追加進度'}</span>
+                </button>
+                {pendingText && <span onClick={()=>{setPendingText('');setShowEditText(false);}}
+                  style={{fontSize:11,color:'#bbb',cursor:'pointer',flexShrink:0}}>清除</span>}
+              </div>
+            </div>
+          )}
           <textarea
             placeholder="AI 自動填入，或手動記錄處理過程..."
             value={form.progress} rows={8}
